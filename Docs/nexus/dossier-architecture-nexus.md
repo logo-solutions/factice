@@ -220,15 +220,17 @@ Les artefacts de build entrent par le dépôt candidat, sont promus en release, 
 
 ## 6. Risques
 
-| Risque | Description | Parade |
-|---|---|---|
-| Détection après coup | Un composant vulnérable est téléchargé et utilisé avant que Dependency-Track le signale ; la revue de code ne voit pas les dépendances transitives. Reste non couvert : un téléchargement direct par un poste développeur via le proxy | Garde-fou en CI : la politique de violation Dependency-Track (sévérité, licence) fait échouer le build. Alerte continue sur les releases déjà publiées. Délai de traitement aligné sur D7 : décision sous 1 jour ouvré, priorité selon la sévérité |
-| Complexité opérationnelle | 4 briques à exploiter (Nexus, Dependency-Track, Backstage, CMDB) au lieu d'une | Documentation, propriétaire par application, runbooks |
-| Adoption Dependency-Track | Nouvelle plateforme, formation requise | Intégration CI/CD, dashboards visibles, formation équipes |
-| Point unique de défaillance (Nexus) | Si Nexus tombe, plus aucune construction | Haute disponibilité, sauvegarde, PRA testé |
-| Lien incident-release absent | DORA non mesurable sans ce lien | Mettre en place dans l'ITSM, pipeline émet l'événement |
-| SBOM reconstitué (COTS) | Analyse Dependency-Track peut être incomplète | Marquer comme "reconstitué", exigence contractuelle aux renouvellements |
-| Discipline d'équipe requise | Détection sans blocage suppose réaction active aux alertes | Nommer qui tranche, SLA par sévérité, suivi des alertes |
+Classés par criticité (probabilité × impact, échelle de 1 à 3), puis par impact à criticité égale. Une criticité de 9 appelle une parade avant la mise en service, 6 un plan daté, 4 un suivi.
+
+| Rang | Risque | Probabilité | Impact | Criticité | Description | Parade |
+|---|---|---|---|---|---|---|
+| 1 | Détection après coup | Élevée | Élevée | 9 | Un composant vulnérable est téléchargé et utilisé avant que Dependency-Track le signale ; la revue de code ne voit pas les dépendances transitives. Reste non couvert : un téléchargement direct par un poste développeur via le proxy | Garde-fou en CI : la politique de violation Dependency-Track (sévérité, licence) fait échouer le build. Alerte continue sur les releases déjà publiées. Délai de traitement aligné sur D7 : décision sous 1 jour ouvré, priorité selon la sévérité |
+| 2 | Discipline d'équipe requise | Élevée | Élevée | 9 | Détection sans blocage suppose réaction active aux alertes | Nommer qui tranche, SLA par sévérité, suivi des alertes |
+| 3 | Point unique de défaillance (Nexus) | Moyenne | Élevée | 6 | Si Nexus tombe, plus aucune construction | Haute disponibilité, sauvegarde, PRA testé |
+| 4 | SBOM reconstitué (COTS) | Élevée | Moyenne | 6 | Analyse Dependency-Track peut être incomplète | Marquer comme "reconstitué", exigence contractuelle aux renouvellements |
+| 5 | Complexité opérationnelle | Élevée | Moyenne | 6 | 4 briques à exploiter (Nexus, Dependency-Track, Backstage, CMDB) au lieu d'une | Documentation, propriétaire par application, runbooks |
+| 6 | Adoption Dependency-Track | Moyenne | Moyenne | 4 | Nouvelle plateforme, formation requise | Intégration CI/CD, dashboards visibles, formation équipes |
+| 7 | Lien incident-release absent | Moyenne | Moyenne | 4 | DORA non mesurable sans ce lien | Mettre en place dans l'ITSM, pipeline émet l'événement |
 
 ## Annexe A. Exemple : applications monex.diagb et monex.jira
 
