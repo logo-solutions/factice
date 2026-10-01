@@ -189,3 +189,35 @@ La note est validée lorsque les priorités suivantes sont actées par les déci
 4. Point de contrôle unique de la chaine de livraison à l'ingestion.
 5. Premiers lots et applications pilotes désignés.
 
+## Démarche projet
+
+### Organisation Agile
+
+**User Stories (US)** et **Epics** structurent la livraison :
+
+### Architecture Review Documents (ARD)
+
+Chaque Epic majeur produit un ARD :
+
+### Cadence
+
+- **Sprint** : 1 semaine
+- **Revue d'architecture (ARD)** : Toutes les 2 semaines ou à la fin d'une Epic
+- **Rétrospective** : Fin d'Epic 
+
+### Rôles clés
+
+- **Product Owner** : Priorise US, valide acceptance criteria
+- **Architects** : Revues ARD, compliance, risques
+- **Teams** :  
+
+### Livrables par Sprint
+
+Chaque sprint produit :
+- Code/infra 
+- Paramétage
+- Documentation (ARD, Guide utilisateurs ...)
+
+## Réserves
+
+Les scores 5 sont des jugements à valider avec l'expérience des produits en place, notamment sur le comportement réel des plateformes low code (extensions, SBOM, métriques) et sur ce que les COTS exposent (logs, snapshots).
