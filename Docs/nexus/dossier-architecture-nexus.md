@@ -20,7 +20,6 @@ Version 5 (enrichie), 2026-09-30
 5. [Architecture cible](#5-architecture-cible)
 6. [Options étudiées](#6-options-étudiées)
 7. [Décision recommandée, conséquences et risques](#7-décision-recommandée-conséquences-et-risques)
-8. [Points ouverts](#8-points-ouverts)
 - [Annexe A. Exemple : applications monex.diagb et monex.jira](#annexe-a-exemple--applications-monexdiagb-et-monexjira)
 - [Annexe B. Glossaire](#annexe-b-glossaire)
 
@@ -300,10 +299,6 @@ L'option B reste la réponse adaptée si le découplage des briques prime.
 | Contrôle moindre en raw | Le contrôle automatique s'applique moins bien au format raw (composants éditeur, images de machine) qu'aux formats à écosystème ; la vérification par la Service Sécurité y est plus manuelle | Confirmer l'étendue exacte avec l'éditeur de l'outil |
 | Image dorée partagée | Une mise à jour touche toutes les applications qui l'utilisent ; sans SBOM par image et sans la version de l'image dans l'événement de déploiement, on ne sait pas lesquelles | SBOM par image et version d'image dans l'événement |
 
-## 8. Points ouverts
-
-Aucun à ce stade. La décision sur les composants tiers bloqués est tranchée en D6 : la Service Sécurité décide seule, sous 1 jour ouvré.
-
 ## Annexe A. Exemple : applications monex.diagb et monex.jira
 
 Cet exemple illustre D3, le traitement des composants éditeur et des images dorées, et la manière de retrouver les éléments d'une application parmi environ 60.
@@ -316,7 +311,7 @@ Cet exemple illustre D3, le traitement des composants éditeur et des images dor
 | monex.diagb | Temurin 21 | Application | Image dorée mutualisée | Raw | Version de l'image, commit de construction |
 | monex.diagb | MongoDB 7.0 | Base de données | Image dorée mutualisée | Raw | Version de l'image, commit de construction |
 | monex.diagb | MariaDB 11.x | Base de données | Image dorée mutualisée | Raw | Version de l'image, commit de construction |
-| monex.jira | Jira Data Center 11.3 | Application | Éditeur (COTS) | Raw | Nom d'origine, version, empreinte éditeur |
+| monex.jira | Jira Data Center 11.3 | Application | Éditeur (COTS) | Container | Digest, version, empreinte éditeur |
 | monex.jira | Temurin 21 | Application | Image dorée mutualisée (la même que monex.diagb) | Raw | Version de l'image, commit de construction |
 | monex.jira | PostgreSQL 17 | Base de données | Image dorée mutualisée (conteneur) | Docker | Digest, version, commit de construction |
 
@@ -328,8 +323,6 @@ Nexus
 +-- raw-candidat            (hébergé, raw)
 |   +-- monex.diagb/
 |   |   +-- diagb/1.2/                          paquet éditeur
-|   +-- monex.jira/
-|   |   +-- jira-datacenter/11.3/               installeur éditeur
 |   +-- mutualise/
 |       +-- image-doree-temurin-21/<version>-<n° de build>/
 |       +-- image-doree-mongodb-7.0/<version>-<n° de build>/
@@ -338,17 +331,17 @@ Nexus
 +-- raw-release             (hébergé, raw, immuable)
 |   +-- monex.diagb/
 |   |   +-- diagb/1.2/                          paquet + SBOM (reconstitué)
-|   +-- monex.jira/
-|   |   +-- jira-datacenter/11.3/               installeur + SBOM (reconstitué)
 |   +-- mutualise/
 |       +-- image-doree-temurin-21/<version>/   image + SBOM + commit
 |       +-- image-doree-mongodb-7.0/<version>/  image + SBOM + commit
 |       +-- image-doree-mariadb-11/<version>/   image + SBOM + commit
 |
 +-- docker-candidat         (hébergé, Docker)
+|   +-- monex.jira/jira-datacenter:<version>-<n° de build>
 |   +-- mutualise/image-doree-postgresql-17:<version>-<n° de build>
 |
 +-- docker-release          (hébergé, Docker, immuable)
+|   +-- monex.jira/jira-datacenter:<version>   digest + SBOM + commit
 |   +-- mutualise/image-doree-postgresql-17:<version>   digest + SBOM + commit
 |
 +-- docker-proxy            (proxy du dépôt Docker public)
