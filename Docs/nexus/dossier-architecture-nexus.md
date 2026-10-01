@@ -224,7 +224,7 @@ flowchart TB
     PUB["Dépôts publics"] --> PRX["Nexus : proxy"]
     PRX --> CTRL{"Contrôle licences et vulnérabilités"}
     CTRL -->|conforme| USE["Disponible aux équipes"]
-    CTRL -->|bloqué| Service Sécurité["Décision Service Sécurité sous 1 jour ouvré"]
+    CTRL -->|bloqué| SEC["Décision Service Sécurité sous 1 jour ouvré"]
     BLD["Chaîne de build"] --> CAND["Nexus : candidat"]
     IMG["Image dorée mutualisée"] --> CAND
     CAND -->|promotion| REL["Nexus : release immuable + SBOM"]
