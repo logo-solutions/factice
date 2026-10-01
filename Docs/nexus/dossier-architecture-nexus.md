@@ -26,7 +26,7 @@ flowchart LR
 
 ### 2.1 Situation
 
-La stratégie d'origine fait de Nexus la source immuable des artefacts, réconciliée avec une CMDB. Elle s'appuie sur le versionnement sémantique, un SBOM au format CycloneDX par application et une approbation par catégorie d'artefact. Environ 60 applications sont concernées.
+La stratégie d'origine fait de Nexus la source immuable des artefacts, réconciliée avec une CMDB. Elle s'appuie sur le versionnement sémantique, un SBOM au format CycloneDX par application et une approbation par catégorie d'artefact.
 
 ### 2.2 Objectifs
 
@@ -34,7 +34,7 @@ La stratégie d'origine fait de Nexus la source immuable des artefacts, réconci
 2. Un SBOM CycloneDX existe pour chaque application, sans action manuelle.
 3. La CMDB reflète les versions publiées et déployées, sans double saisie.
 4. Un composant tiers courant est disponible en minutes, et non en 1 à 3 jours ouvrés.
-5. Les artefacts d'une application se retrouvent par son identifiant, parmi environ 60.
+5. Les artefacts d'une application se retrouvent par son identifiant.
 
 ### 2.3 Périmètre
 
@@ -86,7 +86,7 @@ Les principes d'origine tiennent : immutabilité, versionnement sémantique, SBO
 | D2 | Un seul flux par nature de donnée : le publié vient de Nexus, le déployé vient du pipeline (release, versions des images dorées, environnement, date, résultat). Aucune saisie manuelle | Temps réel plus lot quotidien à 02:00 | Deux mécanismes pour une même donnée créent des écarts ; ici chaque donnée a une source unique. Le résultat du déploiement rend possible la mesure de la livraison (4.4). La version des images dorées permet de savoir quelles applications une mise à jour concerne. |
 | D3 | L'immutabilité est un réglage de plateforme ; le hash Git est une métadonnée | Hash Git dans le chemin de chaque artefact | Maven, npm et Docker résolvent par coordonnées ou par empreinte ; un chemin sur mesure casse clients et proxys. Le redéploiement interdit sur les releases et l'empreinte des images suffisent. Le hash reste porté en métadonnée, voir 4.3. |
 | D4 | Le nom d'origine est conservé ; la normalisation se fait dans la CMDB | Normalisation en kebab-case à l'ingestion | Réécrire un nom modifie les coordonnées et invalide signatures et sommes de contrôle. |
-| D5 | Un dépôt par format et par cycle de vie. L'identifiant d'application (service.projet) ouvre le chemin des dépôts hébergés ; ce qui est partagé va sous « mutualise ». Le domaine métier, l'équipe et le propriétaire passent par des étiquettes | Chemins par domaine métier ou par organigramme, avec double structure pendant la migration | Un domaine ou une équipe change ; l'identifiant d'application est stable et unique. Il permet de retrouver les artefacts d'une application parmi environ 60, et de régler les droits par préfixe avec un sélecteur de contenu. Deux structures en parallèle doublent la maintenance. |
+| D5 | Un dépôt par format et par cycle de vie. L'identifiant d'application (service.projet) ouvre le chemin des dépôts hébergés ; ce qui est partagé va sous « mutualise ». Le domaine métier, l'équipe et le propriétaire passent par des étiquettes | Chemins par domaine métier ou par organigramme, avec double structure pendant la migration | Un domaine ou une équipe change ; l'identifiant d'application est stable et unique. Il permet de retrouver les artefacts d'une application, et de régler les droits par préfixe avec un sélecteur de contenu. Deux structures en parallèle doublent la maintenance. |
 | D6 | La documentation reste dans le wiki d'entreprise, liée depuis la CMDB | Wiki versionné avec empreinte de document dans le périmètre Nexus | Nexus n'est pas un outil documentaire ; une empreinte obligatoire ajoute de la friction sans gain d'audit. |
 | D7 | Contrôle automatique des composants tiers ; la Service Sécurité tranche seule les cas bloqués, sous 1 jour ouvré | Approbation manuelle par catégorie, délai de 1 à 3 jours ouvrés, voie d'exception de 4 h ; comité restreint pour les cas bloqués | Un comité pousse à télécharger hors circuit ; le délai n'est pas mesuré et l'exception devient la norme. Un décideur unique et un délai court évitent de recréer le goulot. |
 | D8 | Le hash de commit est déclaré par la chaîne de build, vérifié à la promotion (commit présent sur une branche ou une étiquette protégée) | Provenance attestée et signée pour chaque artefact | Cette attestation apporte une preuve vérifiable mais ajoute des identités de signature, une vérification à la consommation et un outillage encore inégal selon les formats. À réévaluer sur exigence d'audit externe ou de preuve à un tiers ; Docker serait le premier format concerné. |
@@ -234,7 +234,7 @@ Classés par criticité (probabilité × impact, échelle de 1 à 3), puis par i
 
 ## Annexe A. Exemple : applications monex.diagb et monex.jira
 
-Cet exemple illustre D5, le traitement des composants éditeur et des images dorées, et la manière de retrouver les éléments d'une application parmi environ 60.
+Cet exemple illustre D5, le traitement des composants éditeur et des images dorées, et la manière de retrouver les éléments d'une application.
 
 ### A.1 Composition des applications
 
@@ -281,7 +281,7 @@ Nexus
     +-- postgres 17         entrée de la construction de l'image dorée
 ```
 
-### A.3 Retrouver les éléments d'une application parmi environ 60
+### A.3 Retrouver les éléments d'une application
 
 | Besoin | Chemin d'accès | Fiabilité |
 |---|---|---|
