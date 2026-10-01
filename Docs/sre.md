@@ -189,6 +189,20 @@ La note est validée lorsque les priorités suivantes sont actées par les déci
 4. Point de contrôle unique de la chaine de livraison à l'ingestion.
 5. Premiers lots et applications pilotes désignés.
 
+## Cas d'usage & bénéfices par rôle
+
+| Rôle | Bénéfice | Indicateur d'impact |
+|---|---|---|
+| **Dév/Intégrateur** | Cycle complet env création → déploiement prod en < 30 min | Délai déploiement -70% |
+| **Architecte** | Standards immuables, compliance design, traçabilité décisions | Dérives architecture = 0 |
+| **BA/QA/Testeurs** | Tests automatisés intégrés au workflow, acceptance criteria exécutables | Couverture test ≥ 80%, bugs détectés -60% |
+| **Exploitant/Support** | Guides opérationnels à jour, visibility incidents, feedback loop | MTTR -50%, satisfaction support +40% |
+| **Compliance/Audit** | Audit trails immutables, conformité trackée, rapports auto-générés | Audit findings = 0, compliance ready |
+| **Sécurité** | Scan CVE centralisé, supply chain contrôlée, secrets gérés | Couverture SBOM = 100%, vulnérabilités -80% |
+| **PO/BA** | Spécifications métier versionnées, feedback cycle rapide, valeur délivrée mesurée | Time-to-market -40%, ROI clair |
+| **Manager/Pilotage** | Visibilité temps réel : KPI, risques, gouvernance | Décision éclairée, governance active |
+| **Ops/SRE** | Guides opérationnels générés, SLO mesurés, PRA testé | Availability ≥ 99.9%, incidents -50% |
+
 ## Démarche projet
 
 - Organisation Agile **User Stories (US)** et **Epics** structurent la livraison
