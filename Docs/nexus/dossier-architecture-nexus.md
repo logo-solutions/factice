@@ -57,7 +57,7 @@ La stratégie d'origine fait de Nexus la source immuable des artefacts, réconci
 ### 3.1 Postulats
 
 - La CMDB reflète ce qui est publié dans Nexus.
-- La CMDB reçoit auService Sécurité les événements de déploiement du pipeline (release, versions des images dorées, environnement, date, résultat), qui référencent les releases Nexus.
+- La CMDB reçoit aussi les événements de déploiement du pipeline (release, versions des images dorées, environnement, date, résultat), qui référencent les releases Nexus.
 - Le CI/CD dispose d'une intégration Nexus native.
 - La CMDB (ITSM) dispose d'un connecteur ou d'une API d'intégration avec Nexus et avec le pipeline.
 
@@ -82,8 +82,8 @@ Les principes d'origine tiennent : immutabilité, versionnement sémantique, SBO
 
 | Réf. | Décision retenue | Alternative écartée | Justification |
 |---|---|---|---|
-| D1 | Nexus stocke et sert, il ne gouverne pas. Quatre rôles séparés : le publié (Nexus), le déployé (pipeline), le risque (Dependency-Track), la connaissance applicative (Backstage). La CMDB garde les processus ITIL | Option A : Nexus Pro au centre, avec pare-feu de dépôt et analyse Sonatype | Indépendance vis-à-vis d'un éditeur, réversibilité brique par brique, coûts maîtrisés, catalogue au service des équipes. Chaque autorisation de composant tiers est tracée dans Git et auditable. Compromis : la détection se fait après coup et non à l'entrée. Elle est compensée par un garde-fou en CI (politique de violation Dependency-Track qui fait échouer le build) et par un traitement sous 1 jour ouvré (D7). |
-| D2 | Un seul flux par nature de donnée : le publié vient de Nexus, le déployé vient du pipeline (release, versions des images dorées, environnement, date, résultat). Aucune saisie manuelle | Temps réel plus lot quotidien à 02:00 | Deux mécanismes pour une même donnée créent des écarts ; ici chaque donnée a une source unique. Le résultat du déploiement rend poService Sécuritéble la mesure de la livraison (4.4). La version des images dorées permet de savoir quelles applications une mise à jour concerne. |
+| D1 | Nexus stocke et sert, il ne gouverne pas. Quatre rôles séparés : le publié (Nexus), le déployé (pipeline), le risque (Dependency-Track), la connaissance applicative (Backstage). La CMDB garde les processus ITIL | Nexus Pro au centre, avec pare-feu de dépôt et analyse Sonatype | Indépendance vis-à-vis d'un éditeur, réversibilité brique par brique, coûts maîtrisés, catalogue au service des équipes. Chaque autorisation de composant tiers est tracée dans Git et auditable. Compromis : la détection se fait après coup et non à l'entrée. Elle est compensée par un garde-fou en CI (politique de violation Dependency-Track qui fait échouer le build) et par un traitement sous 1 jour ouvré (D7). |
+| D2 | Un seul flux par nature de donnée : le publié vient de Nexus, le déployé vient du pipeline (release, versions des images dorées, environnement, date, résultat). Aucune saisie manuelle | Temps réel plus lot quotidien à 02:00 | Deux mécanismes pour une même donnée créent des écarts ; ici chaque donnée a une source unique. Le résultat du déploiement rend possible la mesure de la livraison (4.4). La version des images dorées permet de savoir quelles applications une mise à jour concerne. |
 | D3 | L'immutabilité est un réglage de plateforme ; le hash Git est une métadonnée | Hash Git dans le chemin de chaque artefact | Maven, npm et Docker résolvent par coordonnées ou par empreinte ; un chemin sur mesure casse clients et proxys. Le redéploiement interdit sur les releases et l'empreinte des images suffisent. Le hash reste porté en métadonnée, voir 4.3. |
 | D4 | Le nom d'origine est conservé ; la normalisation se fait dans la CMDB | Normalisation en kebab-case à l'ingestion | Réécrire un nom modifie les coordonnées et invalide signatures et sommes de contrôle. |
 | D5 | Un dépôt par format et par cycle de vie. L'identifiant d'application (service.projet) ouvre le chemin des dépôts hébergés ; ce qui est partagé va sous « mutualise ». Le domaine métier, l'équipe et le propriétaire passent par des étiquettes | Chemins par domaine métier ou par organigramme, avec double structure pendant la migration | Un domaine ou une équipe change ; l'identifiant d'application est stable et unique. Il permet de retrouver les artefacts d'une application parmi environ 60, et de régler les droits par préfixe avec un sélecteur de contenu. Deux structures en parallèle doublent la maintenance. |
@@ -162,7 +162,7 @@ Nexus ne mesure pas à lui seul la performance de livraison. Il fournit la clé 
 
 | Indicateur | Définition | Sources | Prérequis |
 |---|---|---|---|
-| Fréquence de déploiement | Nombre de déploiements réuService Sécurités en production, par application et par période | Événements du pipeline | Résultat du déploiement dans l'événement |
+| Fréquence de déploiement | Nombre de déploiements réussis en production, par application et par période | Événements du pipeline | Résultat du déploiement dans l'événement |
 | Délai de mise en production | Durée entre le commit et son déploiement en production, mesurable en deux segments (commit vers promotion, promotion vers déploiement) | Date du commit (chaîne de build), date de promotion (Nexus), date de déploiement (pipeline) | Date du commit en métadonnée |
 | Taux d'échec des changements | Part des déploiements suivis d'un incident ou d'un retour arrière | Résultat du déploiement (pipeline), incidents (ITSM) | Lien incident vers release |
 | Délai de rétablissement | Durée entre l'ouverture d'un incident lié à une release et son rétablissement | ITSM | Lien incident vers release |
@@ -176,7 +176,7 @@ flowchart LR
 
 **Trois prérequis**
 
-1. **Résultat du déploiement** : l'événement du pipeline porte, en plus de la release, des versions des images dorées, de l'environnement et de la date, un résultat (réuService Sécurité, échoué, retour arrière). Sans lui, le taux d'échec est incalculable (D2).
+1. **Résultat du déploiement** : l'événement du pipeline porte, en plus de la release, des versions des images dorées, de l'environnement et de la date, un résultat (réussi, échoué, retour arrière). Sans lui, le taux d'échec est incalculable (D2).
 2. **Date du commit** : la chaîne de build l'écrit en métadonnée avec le hash (4.3). Nexus reste autonome, sans interrogation de Git à la lecture.
 3. **Lien incident vers release** : l'ITSM rattache chaque incident à la release Nexus concernée. Ce lien relève de l'ITSM, pas de Nexus, et conditionne le taux d'échec et le délai de rétablissement.
 
@@ -185,7 +185,7 @@ flowchart LR
 - Un déploiement hors pipeline fausse la fréquence et le délai (voir le risque « Écart de déploiement », 8.3).
 - La date du commit est déclarée par la chaîne de build, comme le hash (D8).
 - Un composant éditeur n'a pas de commit : son délai se mesure depuis la date de réception dans le dépôt candidat.
-- Le taux d'échec et le délai de rétablissement dépendent de l'ITSM : le doService Sécuritéer les rend poService Sécuritébles, il ne les couvre pas.
+- Le taux d'échec et le délai de rétablissement dépendent de l'ITSM : le dossier les rend possibles, il ne les couvre pas.
 - Ces indicateurs servent à améliorer la chaîne de livraison, pas à classer des équipes.
 
 ## 5. Architecture cible
@@ -218,26 +218,9 @@ flowchart TB
 
 Les artefacts de build entrent par le dépôt candidat, sont promus en release, et leur SBOM est rangé à côté. Les composants tiers ne passent que par le proxy ou par le dépôt candidat, selon leur format. Le pipeline déploie les releases et informe la CMDB de chaque déploiement et de son résultat. La CMDB lit le catalogue et reçoit ces événements.
 
-## 6. Options étudiées
+## 6. Approche retenue
 
-Les deux options appliquent les décisions D2 à D8. Elles diffèrent par l'endroit où vivent le contrôle des composants tiers, le suivi des SBOM et la connaissance des applications.
-
-### 6.1 Option A : Nexus Pro au centre, politiques natives
-
-Nexus porte seul la gouvernance : l'immutabilité, la promotion et le contrôle des composants tiers sont des réglages de la plateforme.
-
-- **Dépôts** : un dépôt par format et par cycle de vie (candidat, release, proxy des dépôts publics), regroupés derrière une seule adresse. Le redéploiement est interdit sur les releases.
-- **Promotion** : un artefact naît candidat, puis passe en release après validation qualité. L'étiquette de promotion porte le numéro de build et le commit source.
-- **Composants tiers** : un pare-feu de dépôt (produit Sonatype complémentaire) met en quarantaine ce qui viole les règles de licence ou de vulnérabilité. La Service Sécurité tranche les cas bloqués (D7).
-- **Droits** : rôles par sélecteur de contenu sur le préfixe de l'application, liés à l'annuaire d'entreprise. Le domaine métier et l'équipe s'expriment par des étiquettes.
-- **SBOM** : produit par la chaîne de build à chaque release, rangé à côté de l'artefact, agrégé par application par l'outil d'analyse de Sonatype.
-- **CMDB** : chaque élément de configuration applicatif référence les coordonnées Nexus ; la CMDB lit le catalogue pour le publié et reçoit les événements du pipeline pour le déployé.
-
-**Forces** : une seule plateforme à exploiter, blocage à l'entrée, peu de pièces mobiles.
-
-**Limites** : dépendance forte à un éditeur, coût cumulé des licences (Nexus Pro, pare-feu, analyse), sortie difficile si la politique du fournisseur change.
-
-### 6.2 Option B : Nexus comme stockage, gouvernance découplée
+Cette approche applique les décisions D1 à D8.
 
 Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance des applications et le suivi des risques vivent dans des briques spécialisées, remplaçables une à une.
 
@@ -247,7 +230,7 @@ Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance
 - **CMDB** : conservée pour les processus ITIL (incidents, changements), reliée au catalogue sans dupliquer ses données.
 - **Autorisation d'un composant tiers** : une demande de changement dans un dépôt Git, revue par des pairs et tracée ; la Service Sécurité tranche les cas bloqués (D7).
 
-**Forces** : chaque brique est remplaçable, moins de dépendance à un éditeur, le catalogue sert auService Sécurité aux équipes de développement.
+**Forces** : chaque brique est remplaçable, moins de dépendance à un éditeur, le catalogue sert aussi aux équipes de développement.
 
 **Limites** : Dependency-Track détecte après coup et ne bloque pas un téléchargement ; on passe de la prévention à la détection, avec quatre briques à exploiter au lieu d'une.
 
