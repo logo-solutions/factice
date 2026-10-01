@@ -108,67 +108,68 @@ Les principes d'origine tiennent : immutabilité, versionnement sémantique, SBO
 
 ### 4.2 Traçabilité au commit (hash Git)
 
-Le hash relie chaque artefact publié au code source qui l'a produit. C'est une métadonnée d'audit, pas un mécanisme de résolution. Il faut distinguer deux identifiants qui répondent à deux questions différentes.
+Pour auditer une release en production, deux identifiants complémentaires sont nécessaires :
 
-| Identifiant | Question à laquelle il répond | Origine |
+#### Hash de commit
+- **Question** : D'où vient cet artefact ?
+- **Réponse** : Code source en Git, révision exacte
+- **Limite** : Ne garantit pas la reproductibilité (même code → builds différents possible)
+
+#### Empreinte de contenu
+- **Question** : C'est bien cet artefact ?
+- **Réponse** : Checksum, digest d'image (preuve d'intégrité)
+- **Limite** : Ne dit rien de l'origine du code
+
+**Règle** : Les deux sont obligatoires. L'un sans l'autre ne suffit pas.
+
+#### Où vivent ces données
+
+| Format | Hash de commit | Empreinte |
 |---|---|---|
-| Hash de commit | De quel code source vient cet artefact ? | Git, connu de la chaîne de build |
-| Empreinte de contenu | Ce binaire est-il celui qui a été publié ? | Calculée par Nexus (somme de contrôle, digest d'image) |
+| **Maven** | Manifeste + attributs Nexus | Checksum asset |
+| **npm** | package.json + attributs Nexus | Digest sha256 |
+| **Docker** | Tag image (révision source) | Digest image |
+| **Raw** (binaires, docs) | Attributs Nexus | Checksum asset |
 
-Le hash de commit seul ne suffit pas : un même commit peut produire deux binaires différents si le build n'est pas reproductible. L'empreinte de contenu seule ne suffit pas non plus, car elle ne dit rien de la source. Les deux sont conservés. On stocke le hash complet, jamais une version abrégée. La date du commit est posée avec le hash ; elle sert au délai de mise en production (4.4).
+#### Chaîne d'audit complète
 
-**Où vit le hash, selon le format**
-
-| Format | Support du hash de commit |
-|---|---|
-| Maven | Métadonnées de l'artefact (manifeste et descripteur) et attributs de l'asset dans Nexus |
-| npm | Champ dédié du descripteur de paquet et attributs de l'asset |
-| Docker | Étiquette standard de l'image (révision de la source) ; l'identité de l'image reste son digest |
-| Raw (binaires, documents, images de machine) | Attributs de l'asset dans Nexus, faute de format porteur |
-
-Dans tous les cas, le hash est auService Sécurité écrit dans le SBOM CycloneDX de la release, sous forme de référence vers le dépôt et la révision. Nexus, le SBOM et la CMDB parlent donc du même commit.
-
-**Cycle de vie**
-
-1. **Build** : la chaîne de build pose le hash et la date du commit comme métadonnées de l'artefact candidat.
-2. **Promotion** : elle vérifie que le commit existe et appartient à une branche ou une étiquette protégée, sans réécriture d'historique, puis fige l'étiquette de promotion (numéro de build et commit source).
-3. **Release** : le dépôt est immuable ; ni l'artefact ni ses métadonnées ne bougent.
-4. **CMDB** : elle lit le commit depuis Nexus. Il n'est jamais ressaisi.
-
-```mermaid
-sequenceDiagram
-    participant G as Git
-    participant B as Chaîne de build
-    participant C as Nexus candidat
-    participant R as Nexus release
-    participant M as CMDB
-    G->>B: commit (hash, date)
-    B->>C: artefact + hash + date + SBOM
-    C->>C: vérifie commit sur branche ou étiquette protégée
-    C->>R: promotion (étiquette : build + commit)
-    R-->>M: lecture du publié (release, commit)
+```
+Binaire en production
+    ↓ (empreinte)
+Nexus / Registry
+    ↓ (hash commit)
+Git (code source)
+    ↓ (SBOM CycloneDX)
+CMDB (traçabilité métier)
 ```
 
-Un nouveau build du même commit produit un nouveau candidat avec un nouveau numéro de build, jamais un remplacement de la release.
+**Règle** : Nexus, SBOM et CMDB parlent du **même commit**. Cela permet de remonter de n'importe quel binaire en prod à son code source.
 
-**Ce que le hash n'est pas**
+#### Stockage du hash
 
-- Pas une version : il n'est ni ordonné ni lisible. La version reste sémantique.
-- Pas une composante du chemin ni de la version (voir D1).
-- Pas une preuve de reproductibilité : c'est le rôle de l'empreinte de contenu.
+- **Format** : Hash complet, jamais abrégé
+- **Localisation** : SBOM CycloneDX (référence Git + révision)
+- **Durée** : Immuable (écrit une fois, jamais modifié)
+- **Contexte** : Date du commit incluse (utile pour délai de mise en production)
 
-**Cas sans hash**
+#### Cycle de vie
 
-- **Composants éditeur (COTS)** : pas de commit source. L'identité est le nom, la version et l'empreinte fournie par l'éditeur.
-- **Composants tiers via le proxy** : pas de commit interne. L'identité est celle de l'amont (coordonnées d'origine) plus l'empreinte de contenu.
+1. **Build** : chaîne de build pose hash + date du commit
+2. **Promotion** : vérification du commit sur branche/étiquette protégée, étiquette de promotion figée
+3. **Release** : dépôt immuable, artefact et métadonnées fixes
+4. **CMDB** : lecture du publié depuis Nexus (jamais de ressaisie manuelle)
 
-Les images dorées, construites en interne, portent au contraire un hash de commit.
+#### Cas sans hash
 
-**Alternatives écartées**
+- **Composants éditeur (COTS)** : pas de commit source → identité = nom + version + empreinte fournisseur
+- **Composants tiers (proxy)** : pas de commit interne → identité = coordonnées amont + empreinte
+- **Images dorées** : construites en interne → portent un hash de commit
 
-- Hash dans le chemin ou dans la version : casse la résolution par les clients et les proxys, et empêche tout ordonnancement (D1).
-- Hash conservé uniquement dans la CMDB ou le wiki : la trace se détache de l'artefact et dérive dès que l'un des deux change.
-- Provenance attestée et signée : voir D7.
+#### Alternatives écartées
+
+- Hash dans le chemin/version : casse la résolution clients et les proxys
+- Hash en CMDB/wiki seulement : trace se détache et dérive
+- Provenance signée : voir D7
 
 ### 4.4 Mesure de la livraison (indicateurs DORA)
 
