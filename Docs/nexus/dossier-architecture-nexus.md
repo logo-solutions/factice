@@ -106,11 +106,7 @@ Les principes d'origine tiennent : immutabilité, versionnement sémantique, SBO
 | D6 | Contrôle automatique des composants tiers ; la Service Sécurité tranche seule les cas bloqués, sous 1 jour ouvré | Approbation manuelle par catégorie, délai de 1 à 3 jours ouvrés, voie d'exception de 4 h ; comité restreint pour les cas bloqués | Un comité pousse à télécharger hors circuit ; le délai n'est pas mesuré et l'exception devient la norme. Un décideur unique et un délai court évitent de recréer le goulot. |
 | D7 | Le hash de commit est déclaré par la chaîne de build, vérifié à la promotion (commit présent sur une branche ou une étiquette protégée) | Provenance attestée et signée pour chaque artefact | Cette attestation apporte une preuve vérifiable mais ajoute des identités de signature, une vérification à la consommation et un outillage encore inégal selon les formats. À réévaluer sur exigence d'audit externe ou de preuve à un tiers ; Docker serait le premier format concerné. |
 
-### 4.2 Question de fond : Nexus ou registre intégré à la plateforme de développement
-
-Si l'organisation est déjà sur GitHub, GitLab ou Azure DevOps, leur registre de paquets intégré peut-il suffire ? Nexus se justifie par le multi-format, le proxy centralisé des dépôts publics et la gouvernance. Avec seulement deux formats et une seule plateforme, le coût d'une brique supplémentaire reste à défendre.
-
-### 4.3 Traçabilité au commit (hash Git)
+### 4.2 Traçabilité au commit (hash Git)
 
 Le hash relie chaque artefact publié au code source qui l'a produit. C'est une métadonnée d'audit, pas un mécanisme de résolution. Il faut distinguer deux identifiants qui répondent à deux questions différentes.
 
