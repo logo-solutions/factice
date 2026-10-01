@@ -1,19 +1,18 @@
-# Transformation Industrialisation
-## Légende
+# Transformation Industrialisation 
+
+## Panorama
+### Légende
 
 | Score | Signification |
 |:---:|---|
 | **0** | Non concerné ou impossible (code fermé) |
-| **5** | Partiellement concerné (enveloppe de déploiement seulement, ou uniquement nos extensions) |
+| **5** | Partiellement concerné (enveloppe de déploiement seulement, ou uniquement nos extensions/paramétrages) |
 | **10** | Pleinement automatisable (100 % concerné) |
+### Types de solution
 
-## Types de solution
-
-- **COTS** : binaire livré, support éditeur, pas de code source. On n'agit qu'en boîte noire, depuis l'extérieur.
+- **COTS** : binaire livré, support éditeur, pas de code source. On n'agit qu'en boîte noire.
 - **Low code** : plateforme configurée et étendue. Du code uniquement sur nos extensions, modules et configurations.
-- **Dev inhouse**  
-
-## Tableau
+- **Dev inhouse**
 
 | Élément | COTS | Low code | Dev inhouse |
 |---|:---:|:---:|:---:|
