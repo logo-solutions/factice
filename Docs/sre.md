@@ -191,13 +191,9 @@ La note est validée lorsque les priorités suivantes sont actées par les déci
 
 ## Démarche projet
 
-### Organisation Agile
-
-**User Stories (US)** et **Epics** structurent la livraison :
-
-### Architecture Review Documents (ARD)
-
-Chaque Epic majeur produit un ARD :
+- Organisation Agile **User Stories (US)** et **Epics** structurent la livraison
+- Architecture Review Documents (ARD)
+- Chaque Epic majeur produit un ARD
 
 ### Cadence
 
@@ -218,6 +214,3 @@ Chaque sprint produit :
 - Paramétage
 - Documentation (ARD, Guide utilisateurs ...)
 
-## Réserves
-
-Les scores 5 sont des jugements à valider avec l'expérience des produits en place, notamment sur le comportement réel des plateformes low code (extensions, SBOM, métriques) et sur ce que les COTS exposent (logs, snapshots).
