@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>{{ tier_web_launchagent_label }}</string>
+	<key>Program</key>
+	<string>/opt/homebrew/bin/caddy</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/caddy</string>
+		<string>run</string>
+		<string>--config</string>
+		<string>{{ tier_web_config_dir }}/Caddyfile</string>
+	</array>
+	<key>WorkingDirectory</key>
+	<string>{{ tier_web_config_dir }}</string>
+	<key>RunAtLoad</key>
+	<{{ tier_web_enabled | lower }}/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>{{ factice_logs_dir }}/caddy-stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>{{ factice_logs_dir }}/caddy-stderr.log</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/{{ tier_web_user }}</string>
+		<key>PATH</key>
+		<string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>CADDY_ENVIRONMENT</key>
+		<string>{{ factice_environment }}</string>
+		<key>CADDY_LOG_LEVEL</key>
+		<string>{{ 'debug' if factice_environment == 'integration' else 'info' }}</string>
+	</dict>
+	<key>UserName</key>
+	<string>{{ tier_web_user }}</string>
+	<key>GroupName</key>
+	<string>{{ tier_web_group }}</string>
+	<key>RestartDelay</key>
+	<integer>10</integer>
+	<key>ThrottleInterval</key>
+	<integer>1</integer>
+	<key>ProcessType</key>
+	<string>Adaptive</string>
+	<key>Umask</key>
+	<integer>0022</integer>
+	<key>StartInterval</key>
+	<integer>3600</integer>
+	<key>StandardOutPath</key>
+	<string>{{ factice_logs_dir }}/caddy.log</string>
+	<key>StandardErrorPath</key>
+	<string>{{ factice_logs_dir }}/caddy-error.log</string>
+</dict>
+</plist>

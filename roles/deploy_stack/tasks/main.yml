@@ -1,0 +1,95 @@
+---
+- name: Validate required variables
+  assert:
+    that:
+      - stack_name is defined and stack_name != ""
+      - stack_dir is defined and stack_dir != ""
+    fail_msg: "stack_name and stack_dir are required"
+
+- name: Create stack directory
+  file:
+    path: "{{ stack_dir }}"
+    state: directory
+    mode: "0755"
+  register: stack_dir_result
+
+- name: Create Docker network if it doesn't exist
+  docker_network:
+    name: "{{ docker_network }}"
+    driver: "{{ docker_network_driver }}"
+    state: present
+  ignore_errors: true  # Network may already exist
+
+- name: Template docker-compose.yml
+  template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ compose_file }}"
+    mode: "0644"
+  when: compose_template is defined
+
+- name: Template .env file
+  template:
+    src: ".env.j2"
+    dest: "{{ compose_env_file }}"
+    mode: "0600"
+  when: stack_environment is defined
+
+- name: Prune unused Docker resources
+  shell: docker system prune -f
+  when: prune_on_deploy | bool
+
+- name: Pull Docker images
+  docker_compose:
+    project_src: "{{ stack_dir }}"
+    state: present
+    pull: "{{ pull_images | bool }}"
+    recreate: "{{ recreate_containers | bool }}"
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  register: docker_compose_result
+
+- name: Start Docker Compose stack
+  docker_compose:
+    project_src: "{{ stack_dir }}"
+    state: present
+    pull: false
+  environment:
+    DOCKER_HOST: "unix:///var/run/docker.sock"
+  register: stack_start_result
+
+- name: Wait for services to be healthy
+  block:
+    - name: Pause for service startup
+      pause:
+        seconds: "{{ healthcheck_delay }}"
+
+    - name: Check healthcheck endpoints
+      uri:
+        url: "{{ item }}"
+        method: GET
+        status_code: [200, 201, 301, 302]
+        follow_redirects: safe
+        connect_timeout: "{{ healthcheck_timeout }}"
+      retries: "{{ healthcheck_retries }}"
+      delay: 2
+      register: healthcheck_result
+      loop: "{{ healthcheck_urls }}"
+      when: healthcheck_urls | length > 0
+      until: healthcheck_result is succeeded
+
+    - name: Run container health checks via Docker
+      shell: |
+        docker-compose -f {{ compose_file }} ps | grep -E '(Up|healthy)'
+      register: compose_health
+      retries: "{{ healthcheck_retries }}"
+      delay: 2
+      until: compose_health is succeeded
+  when: stack_start_result is succeeded
+
+- name: Display deployment status
+  debug:
+    msg: |
+      Stack {{ stack_name }} deployed successfully
+      Directory: {{ stack_dir }}
+      Compose file: {{ compose_file }}
+      Status: {{ stack_start_result.state }}

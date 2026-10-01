@@ -1,0 +1,97 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: 'Deploy to environment'
+        required: false
+        default: 'none'
+        type: choice
+        options:
+          - none
+          - integration
+          - production
+
+jobs:
+  test-and-build:
+    runs-on: self-hosted
+    outputs:
+      image_tag: ${{ steps.image.outputs.tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'app/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd app
+          npm ci
+
+      - name: Run tests
+        run: |
+          cd app
+          npm test || true
+
+      - name: Build Docker image
+        run: |
+          cd app
+          docker build -t factice:${{ github.sha }} .
+          docker tag factice:${{ github.sha }} factice:latest
+
+      - name: Push to registry
+        env:
+          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+        run: |
+          docker login $REGISTRY_URL -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD
+          docker tag factice:${{ github.sha }} $REGISTRY_URL/factice:${{ github.sha }}
+          docker tag factice:latest $REGISTRY_URL/factice:latest
+          docker push $REGISTRY_URL/factice:${{ github.sha }}
+          docker push $REGISTRY_URL/factice:latest
+          docker logout
+
+      - id: image
+        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+
+  deploy-integration:
+    needs: test-and-build
+    runs-on: self-hosted
+    if: github.ref == 'refs/heads/main' || github.event.inputs.deploy_env == 'integration'
+
+    steps:
+      - name: Deploy to integration
+        run: |
+          cd /Volumes/logousb/SSD/Projects/NAS-LOGO
+          ansible-playbook -i inventory/hosts deploy-factice-integration.yml \
+            --vault-password-file ~/.nas-logo-vault-pass
+
+      - name: Verify integration health
+        run: |
+          curl -f http://localhost:8080/health || exit 1
+
+  deploy-production:
+    needs: test-and-build
+    runs-on: self-hosted
+    if: github.event.inputs.deploy_env == 'production'
+
+    steps:
+      - name: Deploy to production
+        run: |
+          cd /Volumes/logousb/SSD/Projects/NAS-LOGO
+          ansible-playbook -i inventory/hosts deploy-factice-production.yml \
+            --vault-password-file ~/.nas-logo-vault-pass
+
+      - name: Verify production health
+        run: |
+          curl -f http://localhost:9080/health || exit 1

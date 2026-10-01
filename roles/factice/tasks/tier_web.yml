@@ -1,0 +1,115 @@
+---
+- name: Deploy Tier 2 - Web Server (Caddy)
+  block:
+    - name: Install Caddy via Homebrew
+      homebrew:
+        name: caddy
+        state: present
+      when: tier_web_type == "homebrew"
+
+    - name: Create Caddy configuration directory
+      file:
+        path: "{{ tier_web_config_dir }}"
+        state: directory
+        owner: "{{ tier_web_user }}"
+        group: "{{ tier_web_group }}"
+        mode: "0755"
+      become: true
+
+    - name: Template Caddyfile
+      template:
+        src: "Caddyfile.j2"
+        dest: "{{ tier_web_config_dir }}/Caddyfile"
+        owner: "{{ tier_web_user }}"
+        group: "{{ tier_web_group }}"
+        mode: "0644"
+        backup: true
+      become: true
+      register: caddyfile_update
+
+    - name: Verify Caddy configuration syntax
+      shell: |
+        caddy validate --config {{ tier_web_config_dir }}/Caddyfile
+      register: caddy_validation
+      ignore_errors: true
+
+    - name: Log Caddy validation result
+      debug:
+        msg: |
+          Caddy Configuration Validation: {{ "PASSED" if caddy_validation is succeeded else "FAILED" }}
+          Config: {{ tier_web_config_dir }}/Caddyfile
+      failed_when: caddy_validation is failed
+
+    - name: Create LaunchAgent plist for Caddy
+      template:
+        src: "com.factice.web.plist.j2"
+        dest: "{{ tier_web_launchagent_plist }}"
+        owner: root
+        group: wheel
+        mode: "0644"
+        backup: true
+      become: true
+      register: plist_update
+
+    - name: Reload Caddy if configuration changed
+      shell: |
+        launchctl unload -w {{ tier_web_launchagent_plist }} 2>/dev/null || true
+        sleep 2
+        launchctl load -w {{ tier_web_launchagent_plist }}
+      become: true
+      when: caddyfile_update is changed or plist_update is changed
+      register: caddy_reload
+      ignore_errors: true
+
+    - name: Start Caddy if not running
+      shell: |
+        launchctl load -w {{ tier_web_launchagent_plist }}
+      become: true
+      when: caddy_reload is not changed
+      register: caddy_start
+      ignore_errors: true
+
+    - name: Wait for Caddy to start
+      pause:
+        seconds: 3
+
+    - name: Verify Caddy is listening
+      wait_for:
+        host: localhost
+        port: "{{ tier_web_port_http }}"
+        timeout: 30
+      register: caddy_listen
+      ignore_errors: true
+
+    - name: Test Caddy reverse proxy
+      uri:
+        url: "http://localhost:{{ tier_web_port_http }}/health"
+        method: GET
+        status_code: [200, 201]
+      register: caddy_proxy
+      retries: 5
+      delay: 2
+      until: caddy_proxy is succeeded
+      ignore_errors: true
+
+    - name: Log web tier deployment
+      debug:
+        msg: |
+          Web Tier Deployed Successfully
+          Server: Caddy ({{ tier_web_type }})
+          Hostname: {{ tier_web_hostname }}
+          Ports: {{ tier_web_port_http }}:{{ tier_web_port_https }}
+          Config: {{ tier_web_config_dir }}/Caddyfile
+          LaunchAgent: {{ tier_web_launchagent_plist }}
+          Reverse Proxy: {{ "http://localhost:{{ tier_web_port_app }}" }}
+          Status: {{ "Running" if caddy_listen is succeeded else "Check logs" }}
+
+  rescue:
+    - name: Log web tier deployment error
+      debug:
+        msg: |
+          Web tier deployment encountered an error
+          Check Caddy status: launchctl list | grep caddy
+          Config: {{ tier_web_config_dir }}/Caddyfile
+          Validation: caddy validate --config {{ tier_web_config_dir }}/Caddyfile
+      failed_when: false

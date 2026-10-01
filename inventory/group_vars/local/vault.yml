@@ -1,0 +1,9 @@
+---
+# Ansible vault for factice secrets
+# Edit with: ansible-vault edit inventory/group_vars/local/vault.yml
+
+vault_nexus_admin_password: "changeme-nexus"
+vault_nexus_url: "http://localhost:8081"
+vault_factice_db_password: "changeme-factice-dev"
+vault_factice_prod_db_password: "changeme-factice-prod"
+vault_github_runner_token: "changeme-github-token"

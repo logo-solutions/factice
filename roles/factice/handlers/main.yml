@@ -1,0 +1,45 @@
+---
+- name: Restart Caddy web server
+  shell: |
+    launchctl unload -w {{ tier_web_launchagent_plist }} 2>/dev/null || true
+    sleep 2
+    launchctl load -w {{ tier_web_launchagent_plist }}
+  become: true
+  listen: "restart_caddy"
+  ignore_errors: true
+
+- name: Reload Caddy configuration
+  shell: |
+    caddy reload --config {{ tier_web_config_dir }}/Caddyfile
+  listen: "reload_caddy"
+  ignore_errors: true
+
+- name: Restart application container
+  docker_compose:
+    project_src: "{{ tier_app_base_dir }}"
+    services:
+      - app
+    state: restarted
+  listen: "restart_app"
+  ignore_errors: true
+
+- name: Restart PostgreSQL database
+  shell: |
+    brew services restart postgresql@16
+  become: true
+  listen: "restart_database"
+  ignore_errors: true
+
+- name: Load Caddy LaunchAgent
+  shell: |
+    launchctl load -w {{ tier_web_launchagent_plist }}
+  become: true
+  listen: "load_caddy_agent"
+  ignore_errors: true
+
+- name: Unload Caddy LaunchAgent
+  shell: |
+    launchctl unload -w {{ tier_web_launchagent_plist }}
+  become: true
+  listen: "unload_caddy_agent"
+  ignore_errors: true

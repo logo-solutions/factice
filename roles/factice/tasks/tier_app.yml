@@ -1,0 +1,66 @@
+---
+- name: Deploy Tier 1 - Application Container
+  block:
+    - name: Create application directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ tier_app_base_dir }}"
+        - "{{ tier_app_base_dir }}/src"
+        - "{{ tier_app_base_dir }}/config"
+
+    - name: Template docker-compose for app tier
+      template:
+        src: "docker-compose.app.yml.j2"
+        dest: "{{ tier_app_base_dir }}/docker-compose.yml"
+        mode: "0644"
+
+    - name: Template app environment file
+      template:
+        src: ".env.app.j2"
+        dest: "{{ tier_app_base_dir }}/.env"
+        mode: "0600"
+
+    - name: Use deploy_stack role for application container
+      include_role:
+        name: deploy_stack
+      vars:
+        stack_name: "{{ tier_app_container_name }}"
+        stack_dir: "{{ tier_app_base_dir }}"
+        compose_template: "docker-compose.app.yml.j2"
+        pull_images: true
+        recreate_containers: "{{ factice_environment == 'production' }}"
+        healthcheck_urls: ["{{ tier_app_healthcheck_endpoint }}"]
+        healthcheck_retries: "{{ tier_app_healthcheck_retries }}"
+        healthcheck_delay: "{{ tier_app_healthcheck_delay }}"
+
+    - name: Wait for application container to be ready
+      uri:
+        url: "{{ tier_app_healthcheck_endpoint }}"
+        method: GET
+        status_code: [200, 201]
+      register: app_health
+      retries: "{{ tier_app_healthcheck_retries }}"
+      delay: "{{ tier_app_healthcheck_delay }}"
+      until: app_health is succeeded
+
+    - name: Log application tier deployment
+      debug:
+        msg: |
+          Application Tier Deployed Successfully
+          Container: {{ tier_app_container_name }}
+          Image: {{ tier_app_docker_image }}
+          Port: {{ tier_app_port_http }}
+          Health Check: {{ tier_app_healthcheck_endpoint }}
+          Status: {{ "Healthy" if app_health is succeeded else "Checking" }}
+
+  rescue:
+    - name: Log application tier deployment error
+      debug:
+        msg: |
+          Application tier deployment encountered an error
+          Check logs with: docker logs {{ tier_app_container_name }}
+          Config file: {{ tier_app_base_dir }}/docker-compose.yml
+      failed_when: true

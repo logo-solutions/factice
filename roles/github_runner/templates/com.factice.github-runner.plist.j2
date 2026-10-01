@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>{{ github_runner_launchagent_label }}</string>
+	<key>Program</key>
+	<string>{{ github_runner_install_dir }}/run.sh</string>
+	<key>WorkingDirectory</key>
+	<string>{{ github_runner_install_dir }}</string>
+	<key>RunAtLoad</key>
+	<{{ github_runner_autostart | lower }}/>
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+	<key>StandardOutPath</key>
+	<string>{{ github_runner_install_dir }}/runner-stdout.log</string>
+	<key>StandardErrorPath</key>
+	<string>{{ github_runner_install_dir }}/runner-stderr.log</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>HOME</key>
+		<string>/Users/{{ github_runner_user }}</string>
+		<key>PATH</key>
+		<string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<key>RUNNER_TOOL_CACHE</key>
+		<string>{{ github_runner_install_dir }}/.toolcache</string>
+	</dict>
+	<key>UserName</key>
+	<string>{{ github_runner_user }}</string>
+	<key>GroupName</key>
+	<string>{{ github_runner_group }}</string>
+	<key>RestartDelay</key>
+	<integer>10</integer>
+	<key>ThrottleInterval</key>
+	<integer>1</integer>
+	<key>ProcessType</key>
+	<string>Adaptive</string>
+	<key>StartInterval</key>
+	<integer>{{ github_runner_check_interval }}</integer>
+	<key>Umask</key>
+	<integer>0022</integer>
+</dict>
+</plist>

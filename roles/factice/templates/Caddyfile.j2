@@ -1,0 +1,84 @@
+# Factice Reverse Proxy Configuration
+# Generated: {{ ansible_date_time.iso8601 }}
+# Environment: {{ factice_environment }}
+
+{
+  log {
+    format json
+    level {{ 'debug' if factice_environment == 'integration' else 'info' }}
+  }
+
+  admin localhost:2019
+
+  auto_https {{ 'off' if factice_environment == 'integration' else 'on' }}
+}
+
+{{ tier_web_hostname }} {
+  # Logging
+  {% if tier_web_access_logs_enabled %}
+  log {
+    format json
+    output file {{ factice_logs_dir }}/caddy-access.log {
+      roll_size 100mb
+      roll_keep 3
+      roll_keep_for 720h
+    }
+  }
+  {% endif %}
+
+  # Security headers
+  header / {
+    # Remove server header
+    -Server
+
+    # Security headers
+    Strict-Transport-Security "max-age=31536000; includeSubDomains" {
+      preload
+    }
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    X-XSS-Protection "1; mode=block"
+    Referrer-Policy "strict-origin-when-cross-origin"
+  }
+
+  # Compression
+  encode gzip
+
+  # Reverse proxy to application container
+  reverse_proxy localhost:{{ tier_app_port_http }} {
+    header_uri Host {{ tier_web_hostname }}
+    header_up X-Forwarded-Proto https
+    header_up X-Forwarded-Host {{ tier_web_hostname }}
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+
+    # Health checks
+    uri /health
+    policy random_choose
+    timeout 10s
+    keepalive 30s
+
+    # Handle websockets
+    flush_interval -1
+  }
+
+  # Graceful shutdown
+  handle_errors {
+    rewrite * /error{http.error.status_code}
+    reverse_proxy localhost:{{ tier_app_port_http }}
+  }
+}
+
+{% if factice_environment == 'production' %}
+# HTTPS Configuration
+:443 {
+  tls internal
+
+  reverse_proxy localhost:{{ tier_app_port_http }}
+}
+
+# Redirect HTTP to HTTPS
+:80 {
+  redir https://{host}{uri} permanent
+}
+{% endif %}

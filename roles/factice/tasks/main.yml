@@ -1,0 +1,74 @@
+---
+- name: Validate Factice deployment prerequisites
+  assert:
+    that:
+      - factice_environment in ['integration', 'production']
+      - factice_base_dir is defined and factice_base_dir != ""
+    fail_msg: "Factice environment and base directory are required"
+
+- name: Create Factice base directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ factice_base_dir }}"
+    - "{{ factice_logs_dir }}"
+    - "{{ tier_db_backup_dir }}"
+    - "{{ tier_bdd_output_dir }}"
+
+- name: Display deployment context
+  debug:
+    msg: |
+      Factice 3-Tier Orchestration
+      Environment: {{ factice_environment }}
+      Base Directory: {{ factice_base_dir }}
+
+      Tier 1 - Application Container: {{ "ENABLED" if tier_app_enabled else "DISABLED" }}
+        - Container: {{ tier_app_container_name }}
+        - Port: {{ tier_app_port_http }}
+
+      Tier 1 - Database: {{ "ENABLED" if tier_db_enabled else "DISABLED" }}
+        - Type: {{ tier_db_type }}
+        - Name: {{ tier_db_name }}
+        - Port: {{ tier_db_port }}
+
+      Tier 2 - Web Server: {{ "ENABLED" if tier_web_enabled else "DISABLED" }}
+        - Type: {{ tier_web_type }}
+        - Hostname: {{ tier_web_hostname }}
+        - Ports: {{ tier_web_port_http }}:{{ tier_web_port_https }}
+
+      Tier 3 - BDD Testing: {{ "ENABLED" if tier_bdd_enabled else "DISABLED" }}
+        - Framework: {{ tier_bdd_framework }}
+        - Test Directory: {{ tier_bdd_test_dir }}
+
+- name: Deploy Tier 1 - Application Container
+  include_tasks: tier_app.yml
+  when: tier_app_enabled | bool
+
+- name: Deploy Tier 1 - Database
+  include_tasks: tier_db.yml
+  when: tier_db_enabled | bool
+
+- name: Deploy Tier 2 - Web Server
+  include_tasks: tier_web.yml
+  when: tier_web_enabled | bool
+
+- name: Validate Factice deployment
+  include_tasks: validation.yml
+  when: factice_validation_enabled | bool
+
+- name: Log Factice deployment completion
+  debug:
+    msg: |
+      Factice deployment completed successfully
+      Environment: {{ factice_environment }}
+      Access Points:
+        - Application: {{ tier_app_healthcheck_endpoint }}
+        - Web: https://{{ tier_web_hostname }}
+        - Database: {{ tier_db_host }}:{{ tier_db_port }}
+
+      Next Steps:
+        1. Run BDD tests: npm run test:bdd
+        2. Monitor logs: tail -f {{ factice_logs_dir }}/*.log
+        3. Check health: curl -s http://localhost:{{ tier_app_port_http }}/health

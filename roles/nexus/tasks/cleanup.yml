@@ -1,0 +1,51 @@
+---
+- name: Create cleanup policies via Nexus API
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/cleanup-policies"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "notes": "Automated cleanup policy",
+        "format": "*",
+        "mode": "delete",
+        "criteria": {
+          "isPrerelease": {{ item.criteria.get('is_prerelease', false) | lower }},
+          "lastBlobUpdatedDays": {{ item.criteria.get('last_downloaded_days', 30) }},
+          "lastDownloadedDays": {{ item.criteria.get('last_downloaded_days', 30) }},
+          "releaseType": "{{ item.criteria.get('release_type', 'SNAPSHOT') }}"
+        }
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ cleanup_policies }}"
+  register: cleanup_result
+  ignore_errors: true
+
+- name: Log cleanup policy creation results
+  debug:
+    msg: "Cleanup policy {{ item.item.name }}: Status {{ item.status | default('Unknown') }}"
+  loop: "{{ cleanup_result.results }}"
+  when: cleanup_result.results | length > 0
+
+- name: Verify cleanup policies were created
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/cleanup-policies"
+    method: GET
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    status_code: [200, 401]
+  register: existing_policies
+  until: existing_policies is succeeded
+  retries: 3
+  delay: 2
+
+- name: Display created cleanup policies
+  debug:
+    msg: |
+      Total cleanup policies: {{ existing_policies.json | length if existing_policies.json is defined else 0 }}
+      Policies: {{ (existing_policies.json | map(attribute='name') | list) if existing_policies.json is defined else [] }}

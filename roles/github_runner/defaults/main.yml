@@ -1,0 +1,39 @@
+---
+# GitHub Actions Self-Hosted Runner Configuration for Mac Mini
+
+# Runner installation
+github_runner_version: "2.314.1"
+github_runner_install_dir: "/Users/logo/actions-runner"
+github_runner_repo: "https://github.com/actions/runner/releases/download"
+
+# GitHub configuration
+github_runner_org: "logo-solutions"
+github_runner_repo_name: "factice"
+github_runner_token: "{{ vault_github_runner_token | default('') }}"
+github_runner_url: "https://github.com/{{ github_runner_org }}/{{ github_runner_repo_name }}"
+github_runner_name: "mac-mini-runner-01"
+github_runner_labels:
+  - "macos"
+  - "arm64"
+  - "self-hosted"
+  - "factice"
+
+# Runner configuration
+github_runner_work_dir: "{{ github_runner_install_dir }}/_work"
+github_runner_unattended: true
+github_runner_ephemeral: false
+github_runner_replace: true
+
+# LaunchAgent configuration
+github_runner_launchagent_label: "com.factice.github-runner"
+github_runner_launchagent_plist: "/Library/LaunchAgents/{{ github_runner_launchagent_label }}.plist"
+github_runner_user: "logo"
+github_runner_group: "staff"
+
+# Service management
+github_runner_enabled: true
+github_runner_autostart: true
+
+# Maintenance
+github_runner_check_interval: 3600  # seconds
+github_runner_update_check_enabled: true

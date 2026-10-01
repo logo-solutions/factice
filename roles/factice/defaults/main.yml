@@ -1,0 +1,94 @@
+---
+# Factice 3-Tier Orchestration Configuration
+# Environment support: integration, production
+
+# Environment selection
+factice_environment: "integration"  # integration | production
+
+# Common settings
+factice_app_name: "factice"
+factice_base_dir: "/opt/factice"
+factice_docker_network: "nas-network"
+
+# Tier 1: Application Container (Node.js)
+tier_app_enabled: true
+tier_app_container_name: "factice-app"
+tier_app_docker_image: "node:20-alpine"
+tier_app_port_http: "{{ 3001 if factice_environment == 'production' else 3000 }}"
+tier_app_port_internal: 3000
+tier_app_base_dir: "{{ factice_base_dir }}/app"
+tier_app_work_dir: "/app"
+tier_app_docker_user: "node"
+tier_app_healthcheck_endpoint: "http://localhost:{{ tier_app_port_http }}/health"
+tier_app_healthcheck_retries: 30
+tier_app_healthcheck_delay: 5
+
+# Tier 1: Database (PostgreSQL)
+tier_db_enabled: true
+tier_db_type: "homebrew"  # homebrew | docker
+tier_db_name: "factice_{{ factice_environment }}"
+tier_db_user: "factice_{{ factice_environment }}"
+tier_db_password: "{{ vault_factice_db_password | default('changeme') }}"
+tier_db_host: "localhost"
+tier_db_port: "{{ 5433 if factice_environment == 'production' else 5432 }}"
+tier_db_port_internal: 5432
+tier_db_container_name: "factice-db"
+tier_db_docker_image: "postgres:16-alpine"
+tier_db_data_dir: "{{ factice_base_dir }}/db-data"
+tier_db_backup_dir: "{{ factice_base_dir }}/db-backups"
+tier_db_init_script: "{{ factice_base_dir }}/db/init.sql"
+tier_db_pool_size: 20
+
+# Tier 1: Environment Variables
+factice_app_env:
+  NODE_ENV: "{{ 'production' if factice_environment == 'production' else 'development' }}"
+  PORT: "{{ tier_app_port_internal }}"
+  DATABASE_URL: "postgresql://{{ tier_db_user }}:{{ tier_db_password }}@{{ tier_db_host }}:{{ tier_db_port }}/{{ tier_db_name }}"
+  LOG_LEVEL: "{{ 'info' if factice_environment == 'production' else 'debug' }}"
+  API_URL: "http://localhost:{{ tier_app_port_http }}"
+
+# Tier 2: Web Server (Caddy)
+tier_web_enabled: true
+tier_web_type: "homebrew"  # homebrew
+tier_web_service_name: "caddy"
+tier_web_config_dir: "/etc/caddy"
+tier_web_data_dir: "/var/lib/caddy"
+tier_web_launchagent_label: "com.factice.web"
+tier_web_launchagent_plist: "/Library/LaunchAgents/{{ tier_web_launchagent_label }}.plist"
+tier_web_user: "caddy"
+tier_web_group: "staff"
+tier_web_port_http: 80
+tier_web_port_https: 443
+tier_web_port_app: "{{ tier_app_port_http }}"
+tier_web_hostname: "factice.localhost"
+tier_web_log_format: "json"
+tier_web_access_logs_enabled: "{{ factice_environment == 'production' }}"
+
+# Tier 3: BDD Testing (Native)
+tier_bdd_enabled: true
+tier_bdd_type: "native"  # native (runs tests on host)
+tier_bdd_test_dir: "{{ factice_base_dir }}/features"
+tier_bdd_framework: "cucumber"  # cucumber
+tier_bdd_node_version: "20"
+tier_bdd_runner_user: "logo"
+tier_bdd_config_file: "cucumber.js"
+tier_bdd_output_dir: "/tmp/factice-bdd-results"
+tier_bdd_parallel_jobs: 4
+
+# Stack deployment orchestration
+stack_name: "{{ factice_app_name }}"
+stack_dir: "{{ factice_base_dir }}"
+docker_network: "{{ factice_docker_network }}"
+
+# Validation configuration
+factice_validation_enabled: true
+factice_validation_timeout: 120
+factice_validation_startup_wait: 30
+
+# Logs and monitoring
+factice_logs_dir: "{{ factice_base_dir }}/logs"
+factice_metrics_enabled: "{{ factice_environment == 'production' }}"
+
+# Secrets management
+factice_secrets_vault_enabled: false
+factice_secrets_env_file: "{{ factice_base_dir }}/.env.{{ factice_environment }}"

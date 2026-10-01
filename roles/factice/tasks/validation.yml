@@ -1,0 +1,122 @@
+---
+- name: Validate Factice 3-Tier Deployment
+  block:
+    - name: Pause for services to settle
+      pause:
+        seconds: "{{ factice_validation_startup_wait }}"
+
+    - name: Validate Tier 1 - Application Container
+      block:
+        - name: Test application health endpoint
+          uri:
+            url: "{{ tier_app_healthcheck_endpoint }}"
+            method: GET
+            status_code: [200, 201]
+            connect_timeout: 10
+          register: app_health
+          retries: 5
+          delay: 5
+          until: app_health is succeeded
+
+        - name: Verify application container is running
+          shell: |
+            docker ps --filter "name={{ tier_app_container_name }}" --format "{{ .Names }}"
+          register: app_container_check
+          ignore_errors: true
+
+      when: tier_app_enabled | bool
+
+    - name: Validate Tier 1 - Database
+      block:
+        - name: Test database connection
+          postgresql_query:
+            db: "{{ tier_db_name }}"
+            login_user: "{{ tier_db_user }}"
+            login_password: "{{ tier_db_password }}"
+            login_host: "{{ tier_db_host }}"
+            port: "{{ tier_db_port }}"
+            query: "SELECT 1;"
+          register: db_health
+          ignore_errors: true
+
+        - name: Check database disk usage
+          shell: |
+            du -sh {{ tier_db_data_dir }} 2>/dev/null || echo "N/A"
+          register: db_size
+          ignore_errors: true
+
+      when: tier_db_enabled | bool
+
+    - name: Validate Tier 2 - Web Server
+      block:
+        - name: Test Caddy listener
+          wait_for:
+            host: localhost
+            port: "{{ tier_web_port_http }}"
+            timeout: 10
+          register: caddy_listen
+          ignore_errors: true
+
+        - name: Test Caddy reverse proxy to application
+          uri:
+            url: "http://localhost:{{ tier_web_port_http }}/health"
+            method: GET
+            status_code: [200, 201, 301, 302]
+            connect_timeout: 10
+          register: caddy_proxy
+          retries: 3
+          delay: 2
+          until: caddy_proxy is succeeded
+          ignore_errors: true
+
+      when: tier_web_enabled | bool
+
+    - name: Compile validation results
+      set_fact:
+        validation_results:
+          app_tier:
+            enabled: "{{ tier_app_enabled }}"
+            status: "{{ 'PASS' if app_health is succeeded else 'FAIL' }}"
+            container: "{{ app_container_check.stdout if app_container_check.stdout else 'Not running' }}"
+          db_tier:
+            enabled: "{{ tier_db_enabled }}"
+            status: "{{ 'PASS' if db_health is succeeded else 'FAIL' }}"
+            size: "{{ db_size.stdout if db_size.stdout else 'N/A' }}"
+          web_tier:
+            enabled: "{{ tier_web_enabled }}"
+            caddy_listener: "{{ 'OK' if caddy_listen is succeeded else 'FAILED' }}"
+            reverse_proxy: "{{ 'OK' if caddy_proxy is succeeded else 'FAILED' }}"
+
+    - name: Display validation summary
+      debug:
+        msg: |
+          Factice Deployment Validation Summary
+          =====================================
+
+          Application Tier (Enabled: {{ validation_results.app_tier.enabled }})
+            Status: {{ validation_results.app_tier.status }}
+            Container: {{ validation_results.app_tier.container }}
+
+          Database Tier (Enabled: {{ validation_results.db_tier.enabled }})
+            Status: {{ validation_results.db_tier.status }}
+            Size: {{ validation_results.db_tier.size }}
+
+          Web Tier (Enabled: {{ validation_results.web_tier.enabled }})
+            Listener: {{ validation_results.web_tier.caddy_listener }}
+            Reverse Proxy: {{ validation_results.web_tier.reverse_proxy }}
+
+          Overall Status: {{ "ALL SYSTEMS GO" if (validation_results.app_tier.status == 'PASS' and validation_results.db_tier.status == 'PASS') else "CHECK LOGS" }}
+
+  rescue:
+    - name: Log validation failure
+      debug:
+        msg: |
+          Deployment validation encountered issues
+          Environment: {{ factice_environment }}
+          Base Directory: {{ factice_base_dir }}
+
+          Troubleshooting:
+          1. Check container logs: docker logs {{ tier_app_container_name }}
+          2. Check PostgreSQL: brew services list
+          3. Check Caddy: launchctl list | grep caddy
+          4. Check health: curl http://localhost:{{ tier_app_port_http }}/health

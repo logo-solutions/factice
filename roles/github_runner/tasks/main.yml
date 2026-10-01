@@ -1,0 +1,98 @@
+---
+- name: Validate GitHub runner prerequisites
+  assert:
+    that:
+      - github_runner_token != ""
+      - github_runner_org is defined
+      - github_runner_repo_name is defined
+    fail_msg: "GitHub runner token and repository info are required"
+
+- name: Create runner installation directory
+  file:
+    path: "{{ github_runner_install_dir }}"
+    state: directory
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_group }}"
+    mode: "0755"
+
+- name: Download GitHub Actions runner
+  get_url:
+    url: "{{ github_runner_repo }}/v{{ github_runner_version }}/actions-runner-osx-arm64-{{ github_runner_version }}.tar.gz"
+    dest: "/tmp/runner-{{ github_runner_version }}.tar.gz"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_group }}"
+    mode: "0644"
+  register: runner_download
+
+- name: Extract runner archive
+  unarchive:
+    src: "/tmp/runner-{{ github_runner_version }}.tar.gz"
+    dest: "{{ github_runner_install_dir }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_group }}"
+    remote_src: true
+  when: runner_download is succeeded
+
+- name: Run config.sh to register runner
+  shell: |
+    cd {{ github_runner_install_dir }}
+    ./config.sh \
+      --url {{ github_runner_url }} \
+      --token {{ github_runner_token }} \
+      --name {{ github_runner_name }} \
+      --runnergroup "Default" \
+      --labels "{{ github_runner_labels | join(',') }}" \
+      --work "{{ github_runner_work_dir }}" \
+      --unattended \
+      --replace
+  become: true
+  become_user: "{{ github_runner_user }}"
+  register: config_result
+  no_log: true
+
+- name: Create LaunchAgent plist for runner
+  template:
+    src: "com.factice.github-runner.plist.j2"
+    dest: "{{ github_runner_launchagent_plist }}"
+    owner: "{{ github_runner_user }}"
+    group: "{{ github_runner_group }}"
+    mode: "0644"
+  register: plist_created
+
+- name: Load LaunchAgent
+  shell: |
+    launchctl load -w {{ github_runner_launchagent_plist }}
+  when: plist_created is changed or github_runner_autostart | bool
+  register: launchctl_load
+  ignore_errors: true
+
+- name: Wait for runner to connect
+  pause:
+    seconds: 5
+  when: config_result is succeeded
+
+- name: Verify runner installation
+  shell: |
+    cd {{ github_runner_install_dir }}
+    ./run.sh --version
+  become: true
+  become_user: "{{ github_runner_user }}"
+  register: runner_version
+  ignore_errors: true
+
+- name: Display runner status
+  debug:
+    msg: |
+      GitHub Actions Runner deployed successfully
+      Installation Directory: {{ github_runner_install_dir }}
+      Runner Name: {{ github_runner_name }}
+      Organization: {{ github_runner_org }}
+      Repository: {{ github_runner_repo_name }}
+      LaunchAgent: {{ github_runner_launchagent_plist }}
+      Status: {{ "Running" if launchctl_load is succeeded else "Check logs" }}
+      Version: {{ runner_version.stdout_lines | last if runner_version.stdout_lines else "Unknown" }}
+
+- name: Clean up temporary files
+  file:
+    path: "/tmp/runner-{{ github_runner_version }}.tar.gz"
+    state: absent

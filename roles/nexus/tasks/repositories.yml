@@ -1,0 +1,167 @@
+---
+- name: Create Maven proxy repositories
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/maven/proxy"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "online": true,
+        "storage": {
+          "blobStoreName": "{{ item.blob_store }}",
+          "strictContentTypeValidation": true
+        },
+        "proxy": {
+          "remoteUrl": "{{ item.remote_url }}",
+          "contentMaxAge": 1440,
+          "metadataMaxAge": 1440
+        },
+        "negativeCache": {
+          "enabled": true,
+          "timeToLive": 1440
+        },
+        "httpClient": {
+          "blocked": false,
+          "autoBlock": true,
+          "connection": {
+            "retries": 0,
+            "userAgentSuffix": "Nexus",
+            "timeout": 60,
+            "enableCircularRedirects": false,
+            "enableCookieSupport": false
+          }
+        },
+        "cleanup": null
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ repositories.maven | selectattr('type', 'equalto', 'proxy') }}"
+  register: maven_proxy_result
+  ignore_errors: true
+
+- name: Create Maven hosted repositories
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/maven/hosted"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "online": true,
+        "storage": {
+          "blobStoreName": "{{ item.blob_store }}",
+          "strictContentTypeValidation": true,
+          "writePolicy": "ALLOW_WRITE_ONCE"
+        },
+        "component": {
+          "proprietaryComponents": false
+        }
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ repositories.maven | selectattr('type', 'equalto', 'hosted') }}"
+  register: maven_hosted_result
+  ignore_errors: true
+
+- name: Create Docker proxy repositories
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/docker/proxy"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "online": true,
+        "storage": {
+          "blobStoreName": "{{ item.blob_store }}",
+          "strictContentTypeValidation": false
+        },
+        "docker": {
+          "forceBasicAuth": false,
+          "httpsPort": null,
+          "httpPort": 5000,
+          "v1Enabled": false
+        },
+        "proxy": {
+          "remoteUrl": "{{ item.remote_url }}",
+          "contentMaxAge": 1440,
+          "metadataMaxAge": 1440
+        }
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ repositories.docker | selectattr('type', 'equalto', 'proxy') }}"
+  register: docker_proxy_result
+  ignore_errors: true
+
+- name: Create Docker hosted repositories
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/docker/hosted"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "online": true,
+        "storage": {
+          "blobStoreName": "{{ item.blob_store }}",
+          "strictContentTypeValidation": false,
+          "writePolicy": "ALLOW_WRITE_ONCE"
+        },
+        "docker": {
+          "forceBasicAuth": false,
+          "httpsPort": null,
+          "httpPort": 5000,
+          "v1Enabled": false
+        }
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ repositories.docker | selectattr('type', 'equalto', 'hosted') }}"
+  register: docker_hosted_result
+  ignore_errors: true
+
+- name: Create NPM proxy repositories
+  uri:
+    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/npm/proxy"
+    method: POST
+    user: "admin"
+    password: "{{ security.admin_password }}"
+    force_basic_auth: true
+    body_format: json
+    body: |
+      {
+        "name": "{{ item.name }}",
+        "online": true,
+        "storage": {
+          "blobStoreName": "{{ item.blob_store }}",
+          "strictContentTypeValidation": true
+        },
+        "proxy": {
+          "remoteUrl": "{{ item.remote_url }}",
+          "contentMaxAge": 1440,
+          "metadataMaxAge": 1440
+        }
+      }
+    status_code: [201, 400, 401]
+  loop: "{{ repositories.npm | selectattr('type', 'equalto', 'proxy') }}"
+  register: npm_proxy_result
+  ignore_errors: true
+
+- name: Log repository creation results
+  debug:
+    msg: |
+      Maven proxy: {{ maven_proxy_result.results | length }} configurations
+      Maven hosted: {{ maven_hosted_result.results | length }} configurations
+      Docker proxy: {{ docker_proxy_result.results | length }} configurations
+      Docker hosted: {{ docker_hosted_result.results | length }} configurations
+      NPM proxy: {{ npm_proxy_result.results | length }} configurations

@@ -1,0 +1,53 @@
+---
+- name: Run acceptance tests
+  block:
+    - name: Run health check acceptance test
+      uri:
+        url: "{{ item.endpoint }}"
+        method: GET
+        user: "admin"
+        password: "{{ security.admin_password }}"
+        force_basic_auth: true
+        status_code: "{{ item.expected_status }}"
+      loop: "{{ acceptance_tests }}"
+      register: acceptance_test_results
+      ignore_errors: true
+      retries: 5
+      delay: 5
+      until: acceptance_test_results is succeeded
+
+    - name: Analyze acceptance test results
+      set_fact:
+        test_summary:
+          total: "{{ acceptance_tests | length }}"
+          passed: "{{ acceptance_test_results.results | selectattr('failed', 'false') | list | length }}"
+          failed: "{{ acceptance_test_results.results | selectattr('failed', 'true') | list | length }}"
+
+    - name: Display acceptance test summary
+      debug:
+        msg: |
+          Acceptance Test Results:
+          - Total Tests: {{ test_summary.total }}
+          - Passed: {{ test_summary.passed }}
+          - Failed: {{ test_summary.failed }}
+
+          Test Details:
+          {% for test in acceptance_test_results.results %}
+          - {{ test.item.name }}: {{ "PASS" if not test.failed else "FAIL" }} ({{ test.status | default('Unknown') }})
+          {% endfor %}
+
+    - name: Fail if critical tests failed
+      assert:
+        that:
+          - test_summary.failed | int == 0
+        fail_msg: "{{ test_summary.failed }} acceptance tests failed"
+      when: acceptance_tests | length > 0
+
+  rescue:
+    - name: Log acceptance test failure
+      debug:
+        msg: |
+          Acceptance tests encountered issues:
+          - This may indicate Nexus is not fully ready
+          - Check logs with: docker logs {{ nexus_container_name }}
+          - Health check endpoint: http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status

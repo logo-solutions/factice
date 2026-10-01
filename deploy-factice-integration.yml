@@ -1,0 +1,26 @@
+---
+- name: Deploy factice to integration environment
+  hosts: localhost
+  gather_facts: true
+  vars:
+    ansible_connection: local
+    factice_env: integration
+
+  roles:
+    - factice
+
+  post_tasks:
+    - name: Verify integration stack
+      uri:
+        url: "http://localhost:8080/health"
+        status_code: 200
+      retries: 5
+      delay: 5
+
+    - name: Integration deployment complete
+      debug:
+        msg: |
+          ✅ Factice INTEGRATION deployed:
+          - Web:   http://localhost:8080
+          - API:   http://localhost:8080/items
+          - DB:    localhost:5432/factice_integration

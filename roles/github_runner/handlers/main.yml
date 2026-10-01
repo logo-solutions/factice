@@ -1,0 +1,36 @@
+---
+- name: Load GitHub runner LaunchAgent
+  shell: |
+    launchctl load -w {{ github_runner_launchagent_plist }}
+  listen: "load_runner_agent"
+  ignore_errors: true
+
+- name: Unload GitHub runner LaunchAgent
+  shell: |
+    launchctl unload -w {{ github_runner_launchagent_plist }}
+  listen: "unload_runner_agent"
+  ignore_errors: true
+
+- name: Restart GitHub runner LaunchAgent
+  block:
+    - name: Unload runner
+      shell: |
+        launchctl unload -w {{ github_runner_launchagent_plist }}
+      ignore_errors: true
+
+    - name: Wait before reload
+      pause:
+        seconds: 2
+
+    - name: Load runner
+      shell: |
+        launchctl load -w {{ github_runner_launchagent_plist }}
+      ignore_errors: true
+  listen: "restart_runner_agent"
+
+- name: Check runner status
+  shell: |
+    launchctl list | grep {{ github_runner_launchagent_label }}
+  listen: "check_runner_status"
+  register: runner_status
+  ignore_errors: true

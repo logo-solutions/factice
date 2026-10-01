@@ -1,0 +1,23 @@
+---
+# Ansible configuration for factice
+
+# Docker
+docker_host: "unix:///Users/{{ ansible_user_id }}/.colima/default/docker.sock"
+docker_bin: /opt/homebrew/bin/docker
+
+# Nexus
+nexus_install_dir: "{{ ansible_env.HOME }}/nexus"
+nexus_admin_username: admin
+nexus_admin_password: "{{ vault_nexus_admin_password }}"
+nexus_url: "{{ vault_nexus_url }}"
+nexus_data_dir: /Volumes/HDD6/03-Travail-Actif/nexus/nexus-data
+
+# Factice
+factice_db_password: "{{ vault_factice_db_password }}"
+factice_prod_db_password: "{{ vault_factice_prod_db_password }}"
+
+# GitHub Runner
+github_runner_token: "{{ vault_github_runner_token }}"
+github_runner_repository: "logo-solutions/factice"
+
+# Vault secrets are auto-loaded from inventory/group_vars/local/vault.yml

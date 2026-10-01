@@ -1,0 +1,148 @@
+---
+# Nexus Repository Manager v3 deployment specification v5
+
+# Docker deployment
+nexus_container_name: "nexus3"
+nexus_docker_image: "sonatype/nexus3:latest"
+nexus_docker_port_http: 8081
+nexus_docker_port_https: 8082
+nexus_docker_port_docker_registry: 5000
+nexus_docker_data_dir: "/opt/nexus/data"
+nexus_docker_network: "nas-network"
+
+# Stack settings
+stack_name: "nexus"
+stack_dir: "/opt/nexus"
+docker_network: "{{ nexus_docker_network }}"
+
+# Blob stores configuration
+blob_stores:
+  - name: "default"
+    type: "File"
+    path: "{{ nexus_docker_data_dir }}/blobs/default"
+  - name: "artifacts"
+    type: "File"
+    path: "{{ nexus_docker_data_dir }}/blobs/artifacts"
+  - name: "docker-hub"
+    type: "File"
+    path: "{{ nexus_docker_data_dir }}/blobs/docker"
+
+# Repository configuration
+repositories:
+  maven:
+    - name: "maven-central"
+      type: "proxy"
+      format: "maven2"
+      remote_url: "https://repo1.maven.org/maven2/"
+      blob_store: "artifacts"
+    - name: "maven-releases"
+      type: "hosted"
+      format: "maven2"
+      blob_store: "artifacts"
+    - name: "maven-snapshots"
+      type: "hosted"
+      format: "maven2"
+      blob_store: "artifacts"
+
+  docker:
+    - name: "docker-hub"
+      type: "proxy"
+      format: "docker"
+      remote_url: "https://registry-1.docker.io"
+      blob_store: "docker-hub"
+    - name: "docker-hosted"
+      type: "hosted"
+      format: "docker"
+      blob_store: "docker-hub"
+
+  npm:
+    - name: "npm-central"
+      type: "proxy"
+      format: "npm"
+      remote_url: "https://registry.npmjs.org/"
+      blob_store: "artifacts"
+    - name: "npm-hosted"
+      type: "hosted"
+      format: "npm"
+      blob_store: "artifacts"
+
+# Repository groups
+repository_groups:
+  - name: "maven-group"
+    format: "maven2"
+    repositories: ["maven-central", "maven-releases", "maven-snapshots"]
+  - name: "docker-group"
+    format: "docker"
+    repositories: ["docker-hub", "docker-hosted"]
+  - name: "npm-group"
+    format: "npm"
+    repositories: ["npm-central", "npm-hosted"]
+
+# Cleanup policies
+cleanup_policies:
+  - name: "cleanup-old-snapshots"
+    criteria:
+      release_type: "SNAPSHOT"
+      last_downloaded_days: 30
+  - name: "cleanup-old-artifacts"
+    criteria:
+      last_downloaded_days: 90
+
+# Security configuration
+security:
+  admin_password: "{{ nexus_admin_password | default('admin123') }}"
+  enable_anonymous_access: false
+  enable_realms:
+    - "NexusAuthenticatingRealm"
+    - "LdapRealm"
+    - "LocalAuthorityRealm"
+
+  ldap_config:
+    enabled: false
+    name: "ldap"
+    connection_url: "ldap://ldap.example.com:389"
+    base_dn: "dc=example,dc=com"
+    bind_dn: "cn=admin,dc=example,dc=com"
+    bind_password: "{{ ldap_password | default('') }}"
+    user_object_class: "inetOrgPerson"
+    user_id_attribute: "uid"
+
+# CI/CD integration contract
+cicd_contract:
+  health_check_endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
+  readiness_timeout: 120
+  health_check_interval: 10
+  metrics_endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/metrics"
+  supports_prometheus: true
+
+  api_endpoints:
+    repositories: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories"
+    status: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
+    components: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/components"
+
+# CMDB integration
+cmdb_integration:
+  enabled: true
+  inventory_source: "{{ cmdb_url | default('') }}"
+  update_interval: 3600
+  metadata_tags:
+    - "nexus"
+    - "repository-manager"
+    - "artifact-storage"
+
+# Applications list
+applications:
+  nexus: "{{ nexus_docker_image }}"
+  docker: "latest"
+
+# Acceptance test configuration
+acceptance_tests:
+  - name: "health_check"
+    endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
+    expected_status: 200
+  - name: "docker_registry"
+    endpoint: "http://localhost:{{ nexus_docker_port_docker_registry }}/v2/"
+    expected_status: 401
+  - name: "repositories_api"
+    endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories"
+    expected_status: 200
