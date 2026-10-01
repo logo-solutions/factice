@@ -19,9 +19,8 @@ Version 5 (enrichie), 2026-09-30
 4. [Décisions de conception](#4-décisions-de-conception)
 5. [Architecture cible](#5-architecture-cible)
 6. [Options étudiées](#6-options-étudiées)
-7. [Comparaison des options](#7-comparaison-des-options)
-8. [Décision recommandée, conséquences et risques](#8-décision-recommandée-conséquences-et-risques)
-9. [Points ouverts](#9-points-ouverts)
+7. [Décision recommandée, conséquences et risques](#7-décision-recommandée-conséquences-et-risques)
+8. [Points ouverts](#8-points-ouverts)
 - [Annexe A. Exemple : applications monex.diagb et monex.jira](#annexe-a-exemple--applications-monexdiagb-et-monexjira)
 - [Annexe B. Glossaire](#annexe-b-glossaire)
 
@@ -269,29 +268,15 @@ Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance
 
 **Limites** : Dependency-Track détecte après coup et ne bloque pas un téléchargement ; on passe de la prévention à la détection, avec quatre briques à exploiter au lieu d'une.
 
-## 7. Comparaison des options
+## 7. Décision recommandée, conséquences et risques
 
-L'option A l'emporte sur le blocage à l'entrée et la simplicité d'exploitation ; l'option B l'emporte sur l'indépendance vis-à-vis d'un éditeur et la réversibilité.
-
-| Critère | Option A | Option B |
-|---|---|---|
-| Blocage des composants à risque avant usage | Automatique | Détection après coup |
-| Immutabilité et traçabilité au commit | Réglage de plateforme | Réglage de plateforme |
-| SBOM par application | Outil d'analyse Sonatype | Dependency-Track |
-| Pièces à exploiter | Nexus, CMDB | Nexus, Dependency-Track, catalogue, CMDB |
-| Dépendance à un éditeur | Forte | Faible |
-| Coût de licence | Nexus Pro, pare-feu, analyse | Nexus Pro ; briques ouvertes ailleurs |
-| Réversibilité | Moyenne | Bonne, brique par brique |
-
-## 8. Décision recommandée, conséquences et risques
-
-### 8.1 Décision
+### 7.1 Décision
 
 Retenir l'option A : son blocage à l'entrée et sa simplicité d'exploitation prennent le dessus.
 
 L'option B reste la réponse adaptée si le découplage des briques prime.
 
-### 8.2 Conséquences
+### 7.2 Conséquences
 
 - Les équipes publient et consomment via une seule adresse ; le téléchargement direct depuis les postes de build n'a plus lieu d'être.
 - La CMDB est alimentée uniquement par Nexus (publié) et par le pipeline (déployé) : toute correction se fait à la source, jamais dans la CMDB.
@@ -299,7 +284,7 @@ L'option B reste la réponse adaptée si le découplage des briques prime.
 - Les artefacts d'une application se retrouvent par son identifiant ; ce qui est partagé se retrouve par la CMDB (annexe A).
 - Nexus devient un composant critique de la chaîne de livraison.
 
-### 8.3 Risques
+### 7.3 Risques
 
 | Risque | Description | Parade |
 |---|---|---|
@@ -315,7 +300,7 @@ L'option B reste la réponse adaptée si le découplage des briques prime.
 | Contrôle moindre en raw | Le contrôle automatique s'applique moins bien au format raw (composants éditeur, images de machine) qu'aux formats à écosystème ; la vérification par la Service Sécurité y est plus manuelle | Confirmer l'étendue exacte avec l'éditeur de l'outil |
 | Image dorée partagée | Une mise à jour touche toutes les applications qui l'utilisent ; sans SBOM par image et sans la version de l'image dans l'événement de déploiement, on ne sait pas lesquelles | SBOM par image et version d'image dans l'événement |
 
-## 9. Points ouverts
+## 8. Points ouverts
 
 Aucun à ce stade. La décision sur les composants tiers bloqués est tranchée en D6 : la Service Sécurité décide seule, sous 1 jour ouvré.
 
