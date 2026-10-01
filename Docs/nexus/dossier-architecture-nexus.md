@@ -1,4 +1,4 @@
-# Dossier d'architecture : gouvernance des artefacts avec Nexus Repository
+# DoService Sécuritéer d'architecture : gouvernance des artefacts avec Nexus Repository
 
 Version 5 (enrichie), 2026-09-30
 
@@ -63,7 +63,7 @@ La stratégie d'origine fait de Nexus la source immuable des artefacts, réconci
 |---|---|---|
 | Développeur | Récupère ses dépendances (Maven, npm, images Docker) par une seule adresse, sans passer par les dépôts publics. Publie ses composants en candidat. Retrouve un composant par ses coordonnées et sa version sémantique. Demande un composant tiers et l'obtient en minutes s'il est courant. | D3, D6 |
 | Intégrateur (build et livraison) | Publie les artefacts du build dans le dépôt candidat, avec le hash et la date du commit en métadonnées. Déclenche la promotion vers la release. Range le SBOM CycloneDX à côté de l'artefact. Déploie uniquement des releases immuables et émet l'événement de déploiement. | 4.3, D1, D5 |
-| SSI | Bloque à l'entrée les composants tiers qui violent les règles de licence ou de vulnérabilité (option A), ou les détecte après coup (option B). Tranche seule les cas bloqués. Vérifie que chaque release remonte à un commit sur une branche ou une étiquette protégée. Exploite les SBOM pour localiser un composant vulnérable. Définit les droits par rôle et par sélecteur de contenu, sur le préfixe de chaque application. Arbitre le niveau de preuve du hash. | D3, D6, D7, 8.3 |
+| Service sécurité | Bloque à l'entrée les composants tiers qui violent les règles de licence ou de vulnérabilité (option A), ou les détecte après coup (option B). Tranche seule les cas bloqués. Vérifie que chaque release remonte à un commit sur une branche ou une étiquette protégée. Exploite les SBOM pour localiser un composant vulnérable. Définit les droits par rôle et par sélecteur de contenu, sur le préfixe de chaque application. Arbitre le niveau de preuve du hash. | D3, D6, D7, 8.3 |
 | Exploitant | Sait ce qui est déployé, où et depuis quelle release, y compris la version des images dorées. S'appuie sur la haute disponibilité et la sauvegarde d'un composant critique. Applique les règles de rétention pour maîtriser le stockage. | D5, 8.3 |
 | CMDB, ITSM et gouvernance | Lit le publié dans Nexus et reçoit le déployé par le pipeline, sans saisie manuelle. Rattache les incidents aux releases. Dispose d'un catalogue unique, arbitre entre l'option A et l'option B et dispose des données des indicateurs de livraison. | D5, 4.4, 7 |
 | Audit, achats et juridique | Suit un artefact du binaire au commit source et à l'événement de déploiement. Contrôle l'immutabilité des releases et l'existence des SBOM. Exploite les licences des composants tiers issues des SBOM et des règles de licence. | 4.3, 2.2, D6 |
@@ -73,7 +73,7 @@ La stratégie d'origine fait de Nexus la source immuable des artefacts, réconci
 ### 3.1 Postulats
 
 - La CMDB reflète ce qui est publié dans Nexus.
-- La CMDB reçoit aussi les événements de déploiement du pipeline (release, versions des images dorées, environnement, date, résultat), qui référencent les releases Nexus.
+- La CMDB reçoit auService Sécurité les événements de déploiement du pipeline (release, versions des images dorées, environnement, date, résultat), qui référencent les releases Nexus.
 - Le CI/CD dispose d'une intégration Nexus native.
 - La CMDB (ITSM) dispose d'un connecteur ou d'une API d'intégration avec Nexus et avec le pipeline.
 
@@ -102,8 +102,8 @@ Les principes d'origine tiennent : immutabilité, versionnement sémantique, SBO
 | D2 | Le nom d'origine est conservé ; la normalisation se fait dans la CMDB | Normalisation en kebab-case à l'ingestion | Réécrire un nom modifie les coordonnées et invalide signatures et sommes de contrôle. |
 | D3 | Un dépôt par format et par cycle de vie. L'identifiant d'application (service.projet) ouvre le chemin des dépôts hébergés ; ce qui est partagé va sous « mutualise ». Le domaine métier, l'équipe et le propriétaire passent par des étiquettes | Chemins par domaine métier ou par organigramme, avec double structure pendant la migration | Un domaine ou une équipe change ; l'identifiant d'application est stable et unique. Il permet de retrouver les artefacts d'une application parmi environ 60, et de régler les droits par préfixe avec un sélecteur de contenu. Deux structures en parallèle doublent la maintenance. |
 | D4 | La documentation reste dans le wiki d'entreprise, liée depuis la CMDB | Wiki versionné avec empreinte de document dans le périmètre Nexus | Nexus n'est pas un outil documentaire ; une empreinte obligatoire ajoute de la friction sans gain d'audit. |
-| D5 | Un seul flux par nature de donnée : le publié vient de Nexus, le déployé vient du pipeline (release, versions des images dorées, environnement, date, résultat). Aucune saisie manuelle | Temps réel plus lot quotidien à 02:00 | Deux mécanismes pour une même donnée créent des écarts ; ici chaque donnée a une source unique. Le résultat du déploiement rend possible la mesure de la livraison (4.4). La version des images dorées permet de savoir quelles applications une mise à jour concerne. |
-| D6 | Contrôle automatique des composants tiers ; la SSI tranche seule les cas bloqués, sous 1 jour ouvré | Approbation manuelle par catégorie, délai de 1 à 3 jours ouvrés, voie d'exception de 4 h ; comité restreint pour les cas bloqués | Un comité pousse à télécharger hors circuit ; le délai n'est pas mesuré et l'exception devient la norme. Un décideur unique et un délai court évitent de recréer le goulot. |
+| D5 | Un seul flux par nature de donnée : le publié vient de Nexus, le déployé vient du pipeline (release, versions des images dorées, environnement, date, résultat). Aucune saisie manuelle | Temps réel plus lot quotidien à 02:00 | Deux mécanismes pour une même donnée créent des écarts ; ici chaque donnée a une source unique. Le résultat du déploiement rend poService Sécuritéble la mesure de la livraison (4.4). La version des images dorées permet de savoir quelles applications une mise à jour concerne. |
+| D6 | Contrôle automatique des composants tiers ; la Service Sécurité tranche seule les cas bloqués, sous 1 jour ouvré | Approbation manuelle par catégorie, délai de 1 à 3 jours ouvrés, voie d'exception de 4 h ; comité restreint pour les cas bloqués | Un comité pousse à télécharger hors circuit ; le délai n'est pas mesuré et l'exception devient la norme. Un décideur unique et un délai court évitent de recréer le goulot. |
 | D7 | Le hash de commit est déclaré par la chaîne de build, vérifié à la promotion (commit présent sur une branche ou une étiquette protégée) | Provenance attestée et signée pour chaque artefact | Cette attestation apporte une preuve vérifiable mais ajoute des identités de signature, une vérification à la consommation et un outillage encore inégal selon les formats. À réévaluer sur exigence d'audit externe ou de preuve à un tiers ; Docker serait le premier format concerné. |
 
 ### 4.2 Question de fond : Nexus ou registre intégré à la plateforme de développement
@@ -130,7 +130,7 @@ Le hash de commit seul ne suffit pas : un même commit peut produire deux binair
 | Docker | Étiquette standard de l'image (révision de la source) ; l'identité de l'image reste son digest |
 | Raw (binaires, documents, images de machine) | Attributs de l'asset dans Nexus, faute de format porteur |
 
-Dans tous les cas, le hash est aussi écrit dans le SBOM CycloneDX de la release, sous forme de référence vers le dépôt et la révision. Nexus, le SBOM et la CMDB parlent donc du même commit.
+Dans tous les cas, le hash est auService Sécurité écrit dans le SBOM CycloneDX de la release, sous forme de référence vers le dépôt et la révision. Nexus, le SBOM et la CMDB parlent donc du même commit.
 
 **Cycle de vie**
 
@@ -180,7 +180,7 @@ Nexus ne mesure pas à lui seul la performance de livraison. Il fournit la clé 
 
 | Indicateur | Définition | Sources | Prérequis |
 |---|---|---|---|
-| Fréquence de déploiement | Nombre de déploiements réussis en production, par application et par période | Événements du pipeline | Résultat du déploiement dans l'événement |
+| Fréquence de déploiement | Nombre de déploiements réuService Sécurités en production, par application et par période | Événements du pipeline | Résultat du déploiement dans l'événement |
 | Délai de mise en production | Durée entre le commit et son déploiement en production, mesurable en deux segments (commit vers promotion, promotion vers déploiement) | Date du commit (chaîne de build), date de promotion (Nexus), date de déploiement (pipeline) | Date du commit en métadonnée |
 | Taux d'échec des changements | Part des déploiements suivis d'un incident ou d'un retour arrière | Résultat du déploiement (pipeline), incidents (ITSM) | Lien incident vers release |
 | Délai de rétablissement | Durée entre l'ouverture d'un incident lié à une release et son rétablissement | ITSM | Lien incident vers release |
@@ -194,7 +194,7 @@ flowchart LR
 
 **Trois prérequis**
 
-1. **Résultat du déploiement** : l'événement du pipeline porte, en plus de la release, des versions des images dorées, de l'environnement et de la date, un résultat (réussi, échoué, retour arrière). Sans lui, le taux d'échec est incalculable (D5).
+1. **Résultat du déploiement** : l'événement du pipeline porte, en plus de la release, des versions des images dorées, de l'environnement et de la date, un résultat (réuService Sécurité, échoué, retour arrière). Sans lui, le taux d'échec est incalculable (D5).
 2. **Date du commit** : la chaîne de build l'écrit en métadonnée avec le hash (4.3). Nexus reste autonome, sans interrogation de Git à la lecture.
 3. **Lien incident vers release** : l'ITSM rattache chaque incident à la release Nexus concernée. Ce lien relève de l'ITSM, pas de Nexus, et conditionne le taux d'échec et le délai de rétablissement.
 
@@ -203,7 +203,7 @@ flowchart LR
 - Un déploiement hors pipeline fausse la fréquence et le délai (voir le risque « Écart de déploiement », 8.3).
 - La date du commit est déclarée par la chaîne de build, comme le hash (D7).
 - Un composant éditeur n'a pas de commit : son délai se mesure depuis la date de réception dans le dépôt candidat.
-- Le taux d'échec et le délai de rétablissement dépendent de l'ITSM : le dossier les rend possibles, il ne les couvre pas.
+- Le taux d'échec et le délai de rétablissement dépendent de l'ITSM : le doService Sécuritéer les rend poService Sécuritébles, il ne les couvre pas.
 - Ces indicateurs servent à améliorer la chaîne de livraison, pas à classer des équipes.
 
 ## 5. Architecture cible
@@ -227,7 +227,7 @@ flowchart TB
     PUB["Dépôts publics"] --> PRX["Nexus : proxy"]
     PRX --> CTRL{"Contrôle licences et vulnérabilités"}
     CTRL -->|conforme| USE["Disponible aux équipes"]
-    CTRL -->|bloqué| SSI["Décision SSI sous 1 jour ouvré"]
+    CTRL -->|bloqué| Service Sécurité["Décision Service Sécurité sous 1 jour ouvré"]
     BLD["Chaîne de build"] --> CAND["Nexus : candidat"]
     IMG["Image dorée mutualisée"] --> CAND
     CAND -->|promotion| REL["Nexus : release immuable + SBOM"]
@@ -248,7 +248,7 @@ Nexus porte seul la gouvernance : l'immutabilité, la promotion et le contrôle 
 
 - **Dépôts** : un dépôt par format et par cycle de vie (candidat, release, proxy des dépôts publics), regroupés derrière une seule adresse. Le redéploiement est interdit sur les releases.
 - **Promotion** : un artefact naît candidat, puis passe en release après validation qualité. L'étiquette de promotion porte le numéro de build et le commit source.
-- **Composants tiers** : un pare-feu de dépôt (produit Sonatype complémentaire) met en quarantaine ce qui viole les règles de licence ou de vulnérabilité. La SSI tranche les cas bloqués (D6).
+- **Composants tiers** : un pare-feu de dépôt (produit Sonatype complémentaire) met en quarantaine ce qui viole les règles de licence ou de vulnérabilité. La Service Sécurité tranche les cas bloqués (D6).
 - **Droits** : rôles par sélecteur de contenu sur le préfixe de l'application, liés à l'annuaire d'entreprise. Le domaine métier et l'équipe s'expriment par des étiquettes.
 - **SBOM** : produit par la chaîne de build à chaque release, rangé à côté de l'artefact, agrégé par application par l'outil d'analyse de Sonatype.
 - **CMDB** : chaque élément de configuration applicatif référence les coordonnées Nexus ; la CMDB lit le catalogue pour le publié et reçoit les événements du pipeline pour le déployé.
@@ -265,9 +265,9 @@ Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance
 - **Dependency-Track** (open source, OWASP) : reçoit un SBOM CycloneDX par release, l'agrège par application, surveille en continu vulnérabilités et licences.
 - **Catalogue d'ingénierie** (Backstage ou équivalent) : une fiche par application avec propriétaire, domaine, documentation, liens vers Nexus et Dependency-Track.
 - **CMDB** : conservée pour les processus ITIL (incidents, changements), reliée au catalogue sans dupliquer ses données.
-- **Autorisation d'un composant tiers** : une demande de changement dans un dépôt Git, revue par des pairs et tracée ; la SSI tranche les cas bloqués (D6).
+- **Autorisation d'un composant tiers** : une demande de changement dans un dépôt Git, revue par des pairs et tracée ; la Service Sécurité tranche les cas bloqués (D6).
 
-**Forces** : chaque brique est remplaçable, moins de dépendance à un éditeur, le catalogue sert aussi aux équipes de développement.
+**Forces** : chaque brique est remplaçable, moins de dépendance à un éditeur, le catalogue sert auService Sécurité aux équipes de développement.
 
 **Limites** : Dependency-Track détecte après coup et ne bloque pas un téléchargement ; on passe de la prévention à la détection, avec quatre briques à exploiter au lieu d'une.
 
@@ -308,18 +308,18 @@ L'option B reste la réponse adaptée si le découplage des briques prime.
 | Contournement | Si l'accès à Nexus est plus lent que le téléchargement direct, les équipes sortent du circuit | Le proxy doit être plus rapide que l'alternative |
 | Faux sentiment de couverture | Un SBOM sans surveillance continue ne protège de rien | Nommer qui réagit à une alerte |
 | Adoption | Environ 60 applications ne migrent pas en un bloc ; sans propriétaire par application, la migration s'arrête à mi-chemin | Un propriétaire par application |
-| Stockage | Nexus grossit vite (images Docker, images de machine, snapshots) | Règles de rétention dès le départ |
+| Stockage | Nexus groService Sécuritét vite (images Docker, images de machine, snapshots) | Règles de rétention dès le départ |
 | Point unique de défaillance | Si Nexus tombe, plus aucune construction ne passe | Haute disponibilité et sauvegarde dans l'architecture |
 | Écart de déploiement | Un déploiement hors pipeline n'est pas vu par la CMDB et fausse les indicateurs de livraison | L'interdire ou le détecter |
 | Hash déclaré, non prouvé | La chaîne de build écrit le hash et la date du commit ; sans attestation signée (D7), leur sincérité repose sur la protection de cette chaîne | Protéger la chaîne de build ; réévaluer D7 sur exigence d'audit |
 | Lien incident vers release absent | Sans ce lien dans l'ITSM, le taux d'échec et le délai de rétablissement ne sont pas mesurables (4.4) | Mettre en place le lien dans l'ITSM |
 | SBOM reconstitué | Pour un composant éditeur, le SBOM est reconstitué par analyse et peut être incomplet (bibliothèques embarquées dans un binaire) | Le marquer comme tel |
-| Contrôle moindre en raw | Le contrôle automatique s'applique moins bien au format raw (composants éditeur, images de machine) qu'aux formats à écosystème ; la vérification par la SSI y est plus manuelle | Confirmer l'étendue exacte avec l'éditeur de l'outil |
+| Contrôle moindre en raw | Le contrôle automatique s'applique moins bien au format raw (composants éditeur, images de machine) qu'aux formats à écosystème ; la vérification par la Service Sécurité y est plus manuelle | Confirmer l'étendue exacte avec l'éditeur de l'outil |
 | Image dorée partagée | Une mise à jour touche toutes les applications qui l'utilisent ; sans SBOM par image et sans la version de l'image dans l'événement de déploiement, on ne sait pas lesquelles | SBOM par image et version d'image dans l'événement |
 
 ## 9. Points ouverts
 
-Aucun à ce stade. La décision sur les composants tiers bloqués est tranchée en D6 : la SSI décide seule, sous 1 jour ouvré.
+Aucun à ce stade. La décision sur les composants tiers bloqués est tranchée en D6 : la Service Sécurité décide seule, sous 1 jour ouvré.
 
 ## Annexe A. Exemple : applications monex.diagb et monex.jira
 
@@ -385,7 +385,7 @@ Nexus
 ### A.4 Cycle de vie d'un composant éditeur (diagb 1.2)
 
 1. **Réception** : le paquet est déposé dans le raw candidat sous son nom d'origine (D2), avec l'empreinte fournie par l'éditeur.
-2. **Vérification** : l'empreinte calculée par Nexus est comparée à celle de l'éditeur. Le contenu du paquet est analysé pour produire le SBOM CycloneDX. Licences et vulnérabilités sont contrôlées. La SSI tranche seule un cas bloqué, sous 1 jour ouvré (D6).
+2. **Vérification** : l'empreinte calculée par Nexus est comparée à celle de l'éditeur. Le contenu du paquet est analysé pour produire le SBOM CycloneDX. Licences et vulnérabilités sont contrôlées. La Service Sécurité tranche seule un cas bloqué, sous 1 jour ouvré (D6).
 3. **Promotion** : le paquet passe en raw release, immuable, avec son SBOM rangé à côté, marqué « reconstitué par analyse ».
 4. **Déploiement** : le pipeline installe diagb 1.2 et émet l'événement vers la CMDB, avec les versions des images dorées.
 5. **CMDB** : l'élément monex.diagb référence la release diagb 1.2 et les versions des images dorées Temurin 21, MongoDB 7.0 et MariaDB 11.x.
@@ -394,7 +394,7 @@ Nexus
 flowchart LR
     R1["Réception : raw candidat"] --> R2["Vérification : empreinte, SBOM, licences, vulnérabilités"]
     R2 -->|conforme| R3["Promotion : raw release + SBOM reconstitué"]
-    R2 -->|bloqué| S["SSI tranche sous 1 jour ouvré"]
+    R2 -->|bloqué| S["Service Sécurité tranche sous 1 jour ouvré"]
     S -->|autorisé| R3
     R3 --> R4["Déploiement par le pipeline"]
     R4 --> R5["CMDB : diagb 1.2 + images dorées"]
