@@ -1,4 +1,4 @@
-# DoService Sécuritéer d'architecture : gouvernance des artefacts avec Nexus Repository
+# Dossier d'architecture : gouvernance des artefacts avec Nexus Repository
 
 Version 5 (enrichie), 2026-09-30
 
