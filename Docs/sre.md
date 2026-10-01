@@ -215,6 +215,23 @@ La note est validée lorsque les priorités suivantes sont actées par les déci
 - **Revue d'architecture (ARD)** : Toutes les 2 semaines ou à la fin d'une Epic
 - **Rétrospective** : Fin d'Epic 
 
+### Phasage & premiers lots
+
+Proposition : 3 lots majeurs sur **application pilote** 
+
+**Lot 1 – Registry**
+- Ingestion artefacts, métadonnées, SBOM
+- Sortie : App pilote avec artefacts tracés dans registry
+
+**Lot 2 – CI/CD**
+- Pipeline build/test/package automatisé (GitHub Actions)
+- Sortie : App pilote : push → image dans registry (automatique)
+
+**Lot 3 – Workflow de livraison**
+- Promotion dev→recette→prod (Ansible)
+- Gates de promotion, validations
+- Sortie : App pilote déployée end-to-end via workflow
+
 ### Rôles clés
 
 - **Product Owner** : Priorise US, valide acceptance criteria
