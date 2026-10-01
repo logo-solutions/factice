@@ -49,7 +49,7 @@ La stratégie d'origine fait de Nexus la source immuable des artefacts, réconci
 | Intégrateur (build et livraison) | Publie les artefacts du build dans le dépôt candidat, avec le hash et la date du commit en métadonnées. Déclenche la promotion vers la release. Range le SBOM CycloneDX à côté de l'artefact. Déploie uniquement des releases immuables et émet l'événement de déploiement. | 4.3, D3, D2 |
 | Service sécurité | Détecte après coup les composants tiers qui violent les règles de licence ou de vulnérabilité. Tranche seule les cas bloqués. Vérifie que chaque release remonte à un commit sur une branche ou une étiquette protégée. Exploite les SBOM pour localiser un composant vulnérable. Définit les droits par rôle et par sélecteur de contenu, sur le préfixe de chaque application. Arbitre le niveau de preuve du hash. | D5, D7, D8, 8.3 |
 | Exploitant | Sait ce qui est déployé, où et depuis quelle release, y compris la version des images dorées. S'appuie sur la haute disponibilité et la sauvegarde d'un composant critique. Applique les règles de rétention pour maîtriser le stockage. | D2, 8.3 |
-| CMDB, ITSM et gouvernance | Lit le publié dans Nexus et reçoit le déployé par le pipeline, sans saisie manuelle. Rattache les incidents aux releases. Dispose d'un catalogue unique et des données des indicateurs de livraison. | D2, 4.4, 7 |
+| CMDB, ITSM et gouvernance | Lit le publié dans Nexus et reçoit le déployé par le pipeline, sans saisie manuelle. Rattache les incidents aux releases. Dispose d'un catalogue unique et des données des indicateurs de livraison. | D2, 4.4, 6 |
 | Audit, achats et juridique | Suit un artefact du binaire au commit source et à l'événement de déploiement. Contrôle l'immutabilité des releases et l'existence des SBOM. Exploite les licences des composants tiers issues des SBOM et des règles de licence. | 4.3, 2.2, D7 |
 
 ## 3. Postulats et hypothèses
@@ -218,23 +218,7 @@ flowchart TB
 
 Les artefacts de build entrent par le dépôt candidat, sont promus en release, et leur SBOM est rangé à côté. Les composants tiers ne passent que par le proxy ou par le dépôt candidat, selon leur format. Le pipeline déploie les releases et informe la CMDB de chaque déploiement et de son résultat. La CMDB lit le catalogue et reçoit ces événements.
 
-## 6. Approche retenue
-
-Cette approche applique les décisions D1 à D8.
-
-Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance des applications et le suivi des risques vivent dans des briques spécialisées, remplaçables une à une.
-
-- **Nexus** (Pro) : dépôts hébergés et proxys, redéploiement interdit, règles de rétention.
-- **Dependency-Track** (open source, OWASP) : reçoit un SBOM CycloneDX par release, l'agrège par application, surveille en continu vulnérabilités et licences.
-- **Catalogue d'ingénierie** (Backstage ou équivalent) : une fiche par application avec propriétaire, domaine, documentation, liens vers Nexus et Dependency-Track.
-- **CMDB** : conservée pour les processus ITIL (incidents, changements), reliée au catalogue sans dupliquer ses données.
-- **Autorisation d'un composant tiers** : une demande de changement dans un dépôt Git, revue par des pairs et tracée ; la Service Sécurité tranche les cas bloqués (D7).
-
-**Forces** : chaque brique est remplaçable, moins de dépendance à un éditeur, le catalogue sert aussi aux équipes de développement.
-
-**Limites** : Dependency-Track détecte après coup et ne bloque pas un téléchargement ; on passe de la prévention à la détection, avec quatre briques à exploiter au lieu d'une.
-
-## 7 Risques
+## 6. Risques
 
 | Risque | Description | Parade |
 |---|---|---|
