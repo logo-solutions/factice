@@ -1,5 +1,4 @@
-# SRE – Automatisations possibles par type de solution
-
+# Transformation Industrialisation
 ## Légende
 
 | Score | Signification |
@@ -12,7 +11,7 @@
 
 - **COTS** : binaire livré, support éditeur, pas de code source. On n'agit qu'en boîte noire, depuis l'extérieur.
 - **Low code** : plateforme configurée et étendue. Du code uniquement sur nos extensions, modules et configurations.
-- **Dev inhouse** : tout le code est à nous. 
+- **Dev inhouse**  
 
 ## Tableau
 
@@ -116,7 +115,7 @@ Applications avec des formes de livraison hétérogènes : sources Java, contene
 
 ## Enjeux
 
-1. Socle commun : les trois colonnes (COTS, low code, dev inhouse) y sont à 10. Un seul investissement sert l'ensemble du portefeuille d'applications, quel que soit leur type.
+1. Socle commun : Un seul investissement sert l'ensemble du portefeuille d'applications
 2. Traçabilité de bout en bout : le registry devient la source unique de ce qui est déployé (nom normalisé, version, checksum, SBOM). Sans lui, le workflow déploie des artefacts dont on ne peut pas prouver l'origine.
 3. Sécurité de la chaine de livraison : tout artefact passe par un point de contrôle unique (scan CVE, licences, signature éditeur, mirror avec liste blanche). C'est le point d'entrée du code externe en milieu protégé, donc l'enjeu de sécurité n°1.
 4. Reproductibilité et immuabilité : le workflow ne déploie que des versions figées et référencées par leur hash. Cela permet de rejouer un déploiement à l'identique et de prouver « à la date T, l'application X tournait avec cette pile ».
@@ -195,6 +194,3 @@ La note est validée lorsque les priorités suivantes sont actées par les déci
 4. Point de contrôle unique de la chaine de livraison à l'ingestion.
 5. Premiers lots et applications pilotes désignés.
 
-## Réserves
-
-Les scores 5 sont des jugements à valider avec l'expérience des produits en place, notamment sur le comportement réel des plateformes low code (extensions, SBOM, métriques) et sur ce que les COTS exposent (logs, snapshots).
