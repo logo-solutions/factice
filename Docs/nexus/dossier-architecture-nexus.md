@@ -271,33 +271,28 @@ Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance
 
 ### 7.1 Décision
 
-Retenir l'option A : son blocage à l'entrée et sa simplicité d'exploitation prennent le dessus.
-
-L'option B reste la réponse adaptée si le découplage des briques prime.
+Retenir l'option B : Nexus comme stockage, gouvernance découplée (Dependency-Track, Backstage, CMDB).
 
 ### 7.2 Conséquences
 
-- Les équipes publient et consomment via une seule adresse ; le téléchargement direct depuis les postes de build n'a plus lieu d'être.
-- La CMDB est alimentée uniquement par Nexus (publié) et par le pipeline (déployé) : toute correction se fait à la source, jamais dans la CMDB.
-- Les indicateurs de livraison (DORA) deviennent calculables à partir du hash et de la date du commit, des événements du pipeline et du lien incident vers release (4.4).
-- Les artefacts d'une application se retrouvent par son identifiant ; ce qui est partagé se retrouve par la CMDB (annexe A).
-- Nexus devient un composant critique de la chaîne de livraison.
+- Nexus stocke et sert uniquement ; gouvernance découplée via Dependency-Track (SBOM), Backstage (catalogue), CMDB (ITIL)
+- Détection continue des vulnérabilités via Dependency-Track, pas blocage à l'entrée
+- Catalogue d'ingénierie (Backstage) centralise la connaissance applicative au-delà de Nexus
+- Chaque brique est remplaçable indépendamment
+- La CMDB reçoit le publié (Nexus) et le déployé (pipeline)
+- Discipline d'équipe requise : suivi actif des alertes Dependency-Track
 
-### 7.3 Risques
+## Risques
 
 | Risque | Description | Parade |
 |---|---|---|
-| Contournement | Si l'accès à Nexus est plus lent que le téléchargement direct, les équipes sortent du circuit | Le proxy doit être plus rapide que l'alternative |
-| Faux sentiment de couverture | Un SBOM sans surveillance continue ne protège de rien | Nommer qui réagit à une alerte |
-| Adoption | Environ 60 applications ne migrent pas en un bloc ; sans propriétaire par application, la migration s'arrête à mi-chemin | Un propriétaire par application |
-| Stockage | Nexus groService Sécuritét vite (images Docker, images de machine, snapshots) | Règles de rétention dès le départ |
-| Point unique de défaillance | Si Nexus tombe, plus aucune construction ne passe | Haute disponibilité et sauvegarde dans l'architecture |
-| Écart de déploiement | Un déploiement hors pipeline n'est pas vu par la CMDB et fausse les indicateurs de livraison | L'interdire ou le détecter |
-| Hash déclaré, non prouvé | La chaîne de build écrit le hash et la date du commit ; sans attestation signée (D7), leur sincérité repose sur la protection de cette chaîne | Protéger la chaîne de build ; réévaluer D7 sur exigence d'audit |
-| Lien incident vers release absent | Sans ce lien dans l'ITSM, le taux d'échec et le délai de rétablissement ne sont pas mesurables (4.4) | Mettre en place le lien dans l'ITSM |
-| SBOM reconstitué | Pour un composant éditeur, le SBOM est reconstitué par analyse et peut être incomplet (bibliothèques embarquées dans un binaire) | Le marquer comme tel |
-| Contrôle moindre en raw | Le contrôle automatique s'applique moins bien au format raw (composants éditeur, images de machine) qu'aux formats à écosystème ; la vérification par la Service Sécurité y est plus manuelle | Confirmer l'étendue exacte avec l'éditeur de l'outil |
-| Image dorée partagée | Une mise à jour touche toutes les applications qui l'utilisent ; sans SBOM par image et sans la version de l'image dans l'événement de déploiement, on ne sait pas lesquelles | SBOM par image et version d'image dans l'événement |
+| Détection après coup | Composant tiers à risque est téléchargé avant que Dependency-Track le détecte | Monitoring actif, SLA de réaction < 24h, revue de code obligatoire |
+| Complexité opérationnelle | 4 briques à exploiter (Nexus, Dependency-Track, Backstage, CMDB) au lieu d'une | Documentation, propriétaire par application, runbooks |
+| Adoption Dependency-Track | Nouvelle plateforme, formation requise | Intégration CI/CD, dashboards visibles, formation équipes |
+| Point unique de défaillance (Nexus) | Si Nexus tombe, plus aucune construction | Haute disponibilité, sauvegarde, PRA testé |
+| Lien incident-release absent | DORA non mesurable sans ce lien | Mettre en place dans l'ITSM, pipeline émet l'événement |
+| SBOM reconstitué (COTS) | Analyse Dependency-Track peut être incomplète | Marquer comme "reconstitué", exigence contractuelle aux renouvellements |
+| Discipline d'équipe requise | Détection sans blocage suppose réaction active aux alertes | Nommer qui tranche, SLA par sévérité, suivi des alertes |
 
 ## Annexe A. Exemple : applications monex.diagb et monex.jira
 
