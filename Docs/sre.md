@@ -128,18 +128,13 @@ Applications avec des formes de livraison hétérogènes : sources Java, contene
 
 ### Objectifs mesurables (KPI et SLO)
 
-Les cibles marquées « pressentie » viennent des travaux de conception et restent à confirmer.
-
 | Indicateur | Type | Situation actuelle | Cible |
 |---|:---:|---|---|
-| Délai pour répondre à « qui utilise le composant X ? » | KPI | ~2 jours (à confirmer) | ~2 heures (pressentie) |
 | Applications disposant d'un SBOM | KPI | À mesurer | À définir |
 | Déploiements passant par un workflow Ansible | KPI | À mesurer | À définir |
 | Artefacts avec métadonnées d'identité conformes | KPI | À mesurer | À définir |
 | Taux de rapprochement registry / CMDB | KPI | À mesurer | ≥ 95 % (pressentie) |
 | Délai de synchronisation registry vers CMDB | SLO | Sans objet | < 10 s (pressentie) |
-| Disponibilité du registry | SLO | Sans objet | À définir |
-| Disponibilité d'Ansible | SLO | Sans objet | À définir |
 | Délai d'approbation d'un artefact | SLO | À mesurer | À définir par catégorie |
 
 ## Livrables
