@@ -267,22 +267,7 @@ Nexus garde un rôle étroit : stocker, servir, rendre immuable. La connaissance
 
 **Limites** : Dependency-Track détecte après coup et ne bloque pas un téléchargement ; on passe de la prévention à la détection, avec quatre briques à exploiter au lieu d'une.
 
-## 7. Décision recommandée, conséquences et risques
-
-### 7.1 Décision
-
-Retenir l'option B : Nexus comme stockage, gouvernance découplée (Dependency-Track, Backstage, CMDB).
-
-### 7.2 Conséquences
-
-- Nexus stocke et sert uniquement ; gouvernance découplée via Dependency-Track (SBOM), Backstage (catalogue), CMDB (ITIL)
-- Détection continue des vulnérabilités via Dependency-Track, pas blocage à l'entrée
-- Catalogue d'ingénierie (Backstage) centralise la connaissance applicative au-delà de Nexus
-- Chaque brique est remplaçable indépendamment
-- La CMDB reçoit le publié (Nexus) et le déployé (pipeline)
-- Discipline d'équipe requise : suivi actif des alertes Dependency-Track
-
-## Risques
+## 7 Risques
 
 | Risque | Description | Parade |
 |---|---|---|
