@@ -2,14 +2,15 @@
 
 ## Objectif
 
-Comprendre comment les composants (CI/CD, Registry, Ansible, CMDB, Vault) communiquent entre eux, les zones de sécurité, et l'isolation des environnements.
+Comprendre comment les composants (CI/CD, Registry, Ansible, hôte) communiquent entre eux, les zones de sécurité, et l'isolation des environnements.
 
 ## Documents
 
 | Document | Contenu |
 |---|---|
-| [flux-et-reseau.md](flux-et-reseau.md) | Flux entre registre, Ansible, CI/CD, CMDB, Vault et cibles de déploiement |
-| [zones-securite.md](zones-securite.md) | Zones de sécurité, segmentation réseau, isolation |
+| [flux-et-reseau.md](flux-et-reseau.md) | Flux réels du pipeline, diagramme avec frontières de confiance, chiffrement en transit |
+| [zones-securite.md](zones-securite.md) | Zones de sécurité, frontières de confiance, accès d'administration, isolation des environnements |
+| [modele-menaces.md](modele-menaces.md) | Analyse STRIDE aux frontières de confiance, mesures prioritaires |
 
 ## Pour qui ?
 

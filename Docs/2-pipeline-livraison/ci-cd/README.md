@@ -1,10 +1,12 @@
 # CI/CD : Build et promotion
 
-Documents cette section expliquent le workflow CI/CD en quatre étapes :
+Cette section décrit le workflow CI/CD (`.github/workflows/ci.yml`) en quatre étapes :
 
 1. **build** — Tests et construction (tous les pushs)
 2. **promote** — Contrôles et promotion en release (push sur main)
 3. **deploy-integration** — Déploiement automatique
 4. **deploy-production** — Déploiement manuel (décision humaine)
 
-Voir : [pipeline-build-promotion.md](pipeline-build-promotion.md)
+Documents :
+- [pipeline-build-promotion.md](pipeline-build-promotion.md) — déroulé, dépendances, retour arrière, écarts connus
+- [securite-pipeline.md](securite-pipeline.md) — durcissement, analyse, signature : état, écart, cible

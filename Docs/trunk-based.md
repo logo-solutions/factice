@@ -1,6 +1,6 @@
 # Flux de travail Git : trunk-based development
 
-factice applique le *trunk-based development* : une seule branche longue, `main` (le tronc), toujours livrable. Ce document fixe les règles ; le pipeline qui les met en œuvre est décrit dans [flux-cicd.md](flux-cicd.md).
+factice applique le *trunk-based development* : une seule branche longue, `main` (le tronc), toujours livrable. Ce document fixe les règles ; le pipeline qui les met en œuvre est décrit dans [flux-cicd.md](2-pipeline-livraison/ci-cd/pipeline-build-promotion.md).
 
 ## Principes
 
@@ -43,10 +43,9 @@ Une **Merge Request (MR)** est une demande de révision et d'approbation avant d
    - Labelliser (ex: `type:feature`, `priority:high`)
 
 2. **Automatisation (CI/CD)** : À l'ouverture et à chaque push, le workflow `.github/workflows/ci.yml` :
-   - Exécute tests (`npm run test`)
-   - Lint du code (`npm run lint`)
-   - Type-check (`npm run type-check`)
-   - Build artefact (sans publication Nexus)
+   - Exécute les tests (`npm test`)
+   - Construit l'image (sans publication Nexus)
+   - Lint et vérification de types : prévus, pas encore exécutés par le workflow (voir [pipeline-build-promotion.md](2-pipeline-livraison/ci-cd/pipeline-build-promotion.md), « Écarts connus »)
    - Affiche le statut ✅ ou ❌ sur la MR
 
 3. **Révision par les pairs** :
@@ -69,7 +68,7 @@ Une **Merge Request (MR)** est une demande de révision et d'approbation avant d
 
 ### Checklist avant de merger
 
-- [ ] CI/CD pipeline ✅ (tests, lint, build)
+- [ ] CI/CD pipeline ✅ (tests, build)
 - [ ] Minimum 1 approval
 - [ ] Pas de conflits avec `main`
 - [ ] Commit message clair et aux normes Conventional Commits

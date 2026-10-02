@@ -2,7 +2,7 @@
 
 *Un catalogue unique, tracé du code source jusqu'au déploiement. Décision d'architecture, 30 septembre 2026.*
 
-Présentation en 10 slides pour un directeur. Chaque section correspond à une slide, avec son message clé, son contenu et des notes pour l'orateur. Le détail se trouve dans le [dossier d'architecture](dossier-architecture-nexus.md).
+Présentation en 10 slides pour un directeur. Chaque section correspond à une slide, avec son message clé, son contenu et des notes pour l'orateur. Le détail se trouve dans le [dossier d'architecture](nexus-architecture.md).
 
 ## Plan
 

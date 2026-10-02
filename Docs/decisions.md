@@ -58,22 +58,22 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 
 **Alternative écartée** : configurer Nexus manuellement avant de lancer Ansible. C'est plus rapide pour une maquette, mais Nexus n'y serait plus « un service comme les autres ».
 
-**Conclusion** : `roles/nexus` configure l'instance. La gouvernance qu'il met en œuvre est décrite dans [nexus/](nexus/README.md).
+**Conclusion** : `roles/nexus` configure l'instance. La gouvernance qu'il met en œuvre est décrite dans [nexus/](2-pipeline-livraison/registry/README.md).
 
 ---
 
 ## 5. Runner GitHub Actions auto-hébergé
 
-**Décision** : le runner GitHub Actions est installé sur le Mac Mini, comme LaunchAgent.
+**Décision** : le runner GitHub Actions est installé sur l'hôte macOS, comme LaunchAgent.
 
 **Raisons**
-- Nexus tourne sur le Mac Mini et n'est pas exposé publiquement.
+- Nexus tourne sur le même hôte macOS et n'est pas exposé publiquement.
 - Un runner hébergé par GitHub ne peut pas atteindre Nexus sans adresse publique ni tunnel.
 - Un runner auto-hébergé correspond à un contexte réel, où les services restent internes.
 
 **Alternative écartée** : exposer Nexus par un tunnel et utiliser un runner hébergé. C'est plus compliqué, moins représentatif, et cela dégrade la posture de sécurité puisque Nexus deviendrait public.
 
-**Conclusion** : runner auto-hébergé sur le Mac Mini.
+**Conclusion** : runner auto-hébergé sur l'hôte macOS.
 
 ---
 
@@ -92,7 +92,7 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 
 **Alternative écartée** : un workflow simple (tests, construction, publication unique). Plus rapide à mettre en place, mais sans contrôle entre la construction et le déploiement.
 
-**Conclusion** : build, candidat, promotion, release, déploiement par empreinte. Détails dans [nexus/README.md](nexus/README.md).
+**Conclusion** : build, candidat, promotion, release, déploiement par empreinte. Détails dans [nexus/README.md](2-pipeline-livraison/registry/README.md).
 
 ---
 
@@ -106,7 +106,7 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 
 **Alternative écartée** : une promotion native par étiquette. Elle est réservée à l'édition Pro.
 
-**Conclusion** : republication contrôlée. Les écarts avec la spécification sont listés dans [nexus/README.md](nexus/README.md).
+**Conclusion** : republication contrôlée. Les écarts avec la spécification sont listés dans [nexus/README.md](2-pipeline-livraison/registry/README.md).
 
 ---
 
@@ -145,13 +145,13 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 - Un monolithe serait plus simple, mais ne montrerait pas l'orchestration de plusieurs types de services par Ansible.
 - Trois tiers permettent d'illustrer le réseau (conteneur vers base), le redémarrage de trois services et un contrôle de santé qui exige que les trois répondent.
 
-**Conclusion** : trois tiers séparés. Voir [architecture.md](architecture.md).
+**Conclusion** : trois tiers séparés. Voir [architecture.md](architecture-3tiers.md).
 
 ---
 
 ## 11. Pas de grappe, pas de répartition de charge
 
-**Décision** : un seul Mac Mini, une seule instance de chaque tier.
+**Décision** : un seul hôte macOS, une seule instance de chaque tier.
 
 **Raisons**
 - La haute disponibilité est hors périmètre.

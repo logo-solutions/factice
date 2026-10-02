@@ -90,3 +90,23 @@ Un second passage sans changement de configuration ni d'image rend `changed=0`. 
 - la logique métier après déploiement (initialisation, données de départ).
 
 Ces tâches restent au rôle appelant.
+
+## Écarts et évolutions
+
+Constats faits en relisant le rôle, à traiter pour qu'il respecte les bonnes pratiques décrites dans [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md) :
+
+| Constat | Risque | Cible |
+|---|---|---|
+| Aucune validation des arguments : les variables « obligatoires » ne sont pas déclarées dans `meta/argument_specs.yml` | une faute de frappe ou un oubli est détecté tard, par une erreur obscure | déclarer types, défauts et variables obligatoires dans `meta/argument_specs.yml` ; Ansible les valide avant la première tâche |
+| La création du réseau Docker utilise `ignore_errors: true` | une vraie erreur (démon arrêté, droits) est masquée avec « le réseau existe peut-être » | retirer `ignore_errors` : le module `docker_network` est déjà idempotent et n'échoue pas si le réseau existe |
+| Le nettoyage (`prune_on_deploy`) passe par `shell: docker system prune -f` | le module `shell` n'est pas idempotent et le nettoyage global peut supprimer des ressources d'autres piles | `community.docker.docker_prune`, avec filtres limités à ce qui appartient à la pile |
+| Modules appelés sans nom qualifié (`template`, `docker_network`, `uri`) | ambiguïté de résolution, refus par le profil `production` d'`ansible-lint` | noms complets (`ansible.builtin.template`) |
+| Plusieurs `ignore_errors: true` dans les gestionnaires et le tier BDD | des échecs réels passent inaperçus | remplacer par `failed_when` ciblé ou `block/rescue` |
+| `no_log` présent seulement dans `tier_app.yml` | un secret peut apparaître dans la sortie d'une autre tâche | `no_log: true` sur toute tâche qui manipule un secret |
+| Les gestionnaires `restart_stack`, `restart_service`, `reload_compose` ne sont pas décrits par un test | comportement non vérifié | scénario Molecule, voir le document des bonnes pratiques |
+
+## Références
+
+- [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md)
+- [workflow-ansible.md](workflow-ansible.md)
+- Ansible, [argument_specs](https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_reuse_roles.html#role-argument-validation) et [bonnes pratiques](https://docs.ansible.com/ansible/latest/tips_tricks/ansible_tips_tricks.html)

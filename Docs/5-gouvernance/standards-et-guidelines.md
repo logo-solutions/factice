@@ -70,64 +70,30 @@ ansible-playbook site.yml --diff (dry-run)
 
 ### CI/CD (GitHub Actions)
 
-Chaque branche inclut :
+Le workflow de référence est `.github/workflows/ci.yml`, décrit dans [pipeline-build-promotion.md](../2-pipeline-livraison/ci-cd/pipeline-build-promotion.md). Principes :
 
-```yaml
-name: CI
-on: [push, pull_request]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - run: npm ci && npm run lint && npm run type-check && npm test
-
-  build:
-    needs: test
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - run: docker build -t registry/factice:${{ github.sha }} .
-      - run: docker push registry/factice:${{ github.sha }}
-      - run: docker tag registry/factice:${{ github.sha }} registry/factice:latest
-      - run: docker push registry/factice:latest
-
-  deploy-integration:
-    needs: build
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Deploy via Ansible
-        run: |
-          ansible-playbook -i inventory/integration playbooks/deploy.yml \
-            -e docker_image_tag=${{ github.sha }}
-            
-  approval-for-production:
-    needs: deploy-integration
-    runs-on: ubuntu-latest
-    environment: production  # Manual approval required
-    steps:
-      - name: Approved for production
-        run: echo "Deployment approved by ${{ github.actor }}"
-```
+- une étape `build` qui lance les tests et construit l'image ;
+- une étape `promote` qui republie l'image dans `docker-release` après contrôles ;
+- le déploiement d'intégration est automatique, celui de production est manuel, sur un environnement GitHub protégé ;
+- les images sont référencées par empreinte, jamais par étiquette `latest`.
 
 **Gates** :
 
-- Tests doivent passer avant merge
+- Tests doivent passer avant fusion
 - Déploiement intégration automatique
-- Déploiement production = approbation GitHub (environment)
+- Déploiement production = lancement manuel et approbation de l'environnement GitHub
 
 ### Promotion Nexus
 
 ```
-Candidat (staging repo)
-  ↓ (scan CVE ok + tests ok)
-Release (release repo)
-  ↓ (webhook déclenche Ansible)
-Déploiement (integ puis prod)
+Candidat (docker-candidat)
+  ↓ (contrôles de complétude, de provenance et d'empreinte)
+Release (docker-release, immuable)
+  ↓ (le workflow lance Ansible)
+Déploiement (intégration puis production, par empreinte)
 ```
 
-Chaque étape laisse une trace Git + Nexus audit log.
+Chaque étape laisse une trace Git + journal d'audit Nexus. L'analyse de vulnérabilités n'est pas encore en place (voir le TODO).
 
 ## Standards opérationnels
 
@@ -135,8 +101,8 @@ Chaque étape laisse une trace Git + Nexus audit log.
 
 | Ressource | Format | Exemple |
 |---|---|---|
-| Docker image | `service-name:version` | `factice:1.2.3` |
-| Nexus repo | `docker-{stage}` | `docker-candidate`, `docker-release` |
+| Docker image | `service-name@sha256:<empreinte>` | `factice@sha256:ab12…` |
+| Nexus repo | `docker-{stage}` | `docker-candidat`, `docker-release` |
 | Environment | `{env}-{app}` | `integration-factice`, `production-factice` |
 | Ansible group | `{env}` | `[integration]`, `[production]` |
 | PostgreSQL user | `{app}_{env}` | `factice_integration`, `factice_production` |

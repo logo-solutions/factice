@@ -13,7 +13,7 @@ ansible-playbook deploy-factice-<environnement>.yml \
 
 **Pas de SSH distant.** Ansible s'exécute sur localhost. Les tiers (PostgreSQL natif, Caddy natif, conteneur Docker) sont tous déployés sur le **même hôte** qu'Ansible.
 
-**Temps d'exécution :** ~5 min (PostgreSQL install, Caddy config, Docker pull + start, healthchecks).
+**Durée.** Elle dépend de l'état de l'hôte : le premier passage installe PostgreSQL et Caddy, les suivants ne font que converger.
 
 ## Orchestration
 
@@ -121,12 +121,12 @@ L'ordre est important : on valide chaque dépendance avant d'utiliser le tier su
 
 ## Flux des secrets (Ansible Vault)
 
-La chaîne de déverrouillage :
+La chaîne de déverrouillage, **telle qu'elle est conçue** :
 
 ```
 ~/.factice-vault-pass (sur le runner, mode 600)
     ↓ clé de déverrouillage
-inventory/group_vars/local/vault.yml (dans le repo, chiffré Ansible Vault)
+inventory/group_vars/local/vault.yml (dans le dépôt, destiné à être chiffré par Ansible Vault)
     ↓ contient
 vault_factice_db_password, vault_factice_db_user_password, ...
     ↓ référencés par
@@ -140,28 +140,48 @@ Conteneur Docker / Ansible tasks
 
 **Jamais de secret en argument de commande** (`-e`, `-E`). Tous passent par le fichier `.env` ou les variables Ansible.
 
+**État actuel.** Le fichier `vault.yml` versionné contient des valeurs de substitution (`changeme-*`) **en clair** : il n'est pas chiffré. Tant que ce n'est pas corrigé, il ne doit contenir aucune valeur réelle. La cible est soit de le chiffrer (`ansible-vault encrypt`, avec un identifiant de coffre par environnement), soit de ne plus stocker de secret dans le dépôt et de les lire dans un gestionnaire externe au moment de l'exécution. Voir [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md).
+
 ## Idempotence
 
 Un second passage d'un playbook doit rendre `changed=0` : les gabarits identiques ne changent rien, `docker compose up -d` ne recrée un conteneur que si l'image ou la configuration change, et la création de la base est conditionnelle.
 
 ## Événement de déploiement
 
-Après chaque déploiement (intégration ou production), Ansible déclenche `scripts/nexus/deployment-event.sh` :
+L'événement n'est **pas émis par Ansible** : c'est l'étape `Deployment event` du workflow (exécutée même en cas d'échec, `if: always()`) qui appelle `scripts/nexus/deployment-event.sh`, avec le résultat `reussi` ou `echoue`. Le script exige aussi `retour-arriere`, qu'aucune étape du workflow n'utilise aujourd'hui (le retour arrière est manuel).
 
 ```json
 {
-  "environment": "integration",
-  "timestamp": "2026-10-02T15:32:00Z",
-  "version": "1.2.3",
-  "digest": "sha256:abc123...",
-  "status": "success",
-  "runner": "hôte"
+  "application": "factice.app",
+  "environnement": "integration",
+  "release": {
+    "composant": "factice",
+    "version": "1.2.3",
+    "empreinte": "sha256:abc123..."
+  },
+  "imagesDorees": [],
+  "date": "2026-10-02T15:32:00Z",
+  "resultat": "reussi"
 }
 ```
 
-**Destinataire :** `CMDB_EVENT_URL` (optionnel)
+**Journal local.** Chaque événement est ajouté à `deploy-events.jsonl` (variable `EVENT_LOG`), dans le répertoire de travail du job : le journal vit dans l'espace de travail du runner, il n'est donc pas une trace durable.
 
-**Rôle :** auditer qui a déployé quoi et quand. Permet un CMDB central ou une timeline de déploiements.
+**Transmission.** Si `CMDB_EVENT_URL` est défini, l'événement est envoyé en POST (jeton `CMDB_TOKEN` en en-tête `Authorization`). Une erreur de transmission fait échouer l'étape.
+
+**Rôle.** Tracer quelle release a été déployée où et avec quel résultat ; alimenter les mesures DORA (taux d'échec, temps de restauration).
+
+## Spécificités de la plateforme macOS
+
+Les trois tiers ne se comportent pas comme sur un serveur Linux :
+
+| Sujet | Particularité |
+|---|---|
+| Paquets | Homebrew (`brew install`), exécuté sous le compte du runner, pas en administrateur |
+| Services natifs | PostgreSQL via `brew services`, Caddy via un LaunchAgent (`launchctl`) : ce sont des services de session utilisateur, ils ne démarrent qu'avec la session |
+| Conteneur vers hôte | un conteneur atteint la base native par `host.docker.internal`, déclaré dans `extra_hosts` |
+| Pare-feu | le pare-feu applicatif de macOS ou `pf`, pas UFW |
+| Tests de rôles | les tiers natifs ne se testent pas dans un conteneur Linux, voir [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md) |
 
 ## Diagnostic
 
@@ -173,3 +193,9 @@ Après chaque déploiement (intégration ou production), Ansible déclenche `scr
 | Caddy ne démarre pas | `caddy validate --config <répertoire>/Caddyfile`, journaux dans `<répertoire>/logs` |
 | Runner hors ligne | Settings, Actions, Runners ; `launchctl list` sur l'hôte |
 | Événement de déploiement non reçu | `CMDB_EVENT_URL` ou `CMDB_TOKEN` mal configurés |
+
+## Références
+
+- [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md) : qualité, tests, secrets, déploiement
+- [deploy-stack-contract.md](deploy-stack-contract.md) : contrat du rôle générique
+- [../ci-cd/pipeline-build-promotion.md](../ci-cd/pipeline-build-promotion.md) : appel depuis le workflow

@@ -9,7 +9,7 @@ Version 1, 2026-09-30
 | Décision recommandée | Option A : tout en code dans Git, appliqué par une chaîne standard réutilisable et des exécuteurs internes |
 | Alternative étudiée | Option B : orchestrateur de livraison dédié, avec déploiement piloté par un contrôleur GitOps |
 | Points ouverts | Trois, voir section 9 |
-| Documents liés | [Dossier Nexus](../nexus/dossier-architecture-nexus.md), [Spécification Nexus](../nexus/spec-implementation-nexus.md), [Présentation directeur](presentation-automatisation-directeur.md) |
+| Documents liés | [Dossier Nexus](../../2-pipeline-livraison/registry/nexus-architecture.md), [Spécification Nexus](../../2-pipeline-livraison/registry/nexus-spec.md), [Présentation directeur](presentation-directeur.md) |
 
 ## Sommaire
 

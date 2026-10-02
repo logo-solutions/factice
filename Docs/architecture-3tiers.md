@@ -2,7 +2,7 @@
 
 ## Principe
 
-factice sépare une application en trois tiers aux modes d'exécution volontairement différents, afin de montrer comment Ansible orchestre à la fois des conteneurs et des services natifs d'un même hôte (un Mac Mini) :
+factice sépare une application en trois tiers aux modes d'exécution volontairement différents, afin de montrer comment Ansible orchestre à la fois des conteneurs et des services natifs d'un même hôte (un hôte macOS) :
 
 | Tier | Rôle | Exécution | Gestion |
 |---|---|---|---|
@@ -17,7 +17,7 @@ Une seule instance par tier et par environnement. Pas de haute disponibilité : 
 ```mermaid
 flowchart TD
     C[Client HTTP] --> W
-    subgraph hôte [Mac Mini]
+    subgraph hôte [Hôte macOS]
         W["Tier Web<br/>Caddy natif (LaunchAgent)<br/>:8080 intégration, :9080 production"]
         A["Tier App<br/>conteneur Node.js<br/>:3000 intégration, :3001 production"]
         D["Tier BDD<br/>PostgreSQL 16 natif<br/>:5432 intégration, :5433 production"]
@@ -27,7 +27,7 @@ flowchart TD
     N[(Nexus<br/>docker-release)] -.->|image tirée par empreinte| A
 ```
 
-Le tier App est le seul tier livré par la chaîne CI/CD : son image est promue dans `docker-release` puis déployée par empreinte (voir [flux-cicd.md](flux-cicd.md) et [nexus/README.md](nexus/README.md)). Les tiers Web et BDD sont des services d'infrastructure, configurés par Ansible mais non reconstruits à chaque livraison.
+Le tier App est le seul tier livré par la chaîne CI/CD : son image est promue dans `docker-release` puis déployée par empreinte (voir [pipeline-build-promotion.md](2-pipeline-livraison/ci-cd/pipeline-build-promotion.md) et [registry/README.md](2-pipeline-livraison/registry/README.md)). Les tiers Web et BDD sont des services d'infrastructure, configurés par Ansible mais non reconstruits à chaque livraison.
 
 ## Responsabilités par tier
 
@@ -99,7 +99,7 @@ Le rôle `roles/factice` orchestre les trois tiers dans cet ordre : préparation
 | Web | `tasks/tier_web.yml` | installation de Caddy, validation de la configuration, LaunchAgent |
 | Validation | `tasks/validation.yml` | santé de chaque tier, résumé |
 
-`roles/deploy_stack` est générique : il crée le répertoire et le réseau Docker, rend le fichier Compose, tire les images, démarre la pile et attend les contrôles de santé. Son contrat est décrit dans [contrat-deploy-stack.md](contrat-deploy-stack.md).
+`roles/deploy_stack` est générique : il crée le répertoire et le réseau Docker, rend le fichier Compose, tire les images, démarre la pile et attend les contrôles de santé. Son contrat est décrit dans [contrat-deploy-stack.md](2-pipeline-livraison/orchestration/deploy-stack-contract.md).
 
 Les valeurs propres à chaque environnement (ports, noms de base, niveau de journalisation) sont dérivées de la variable `factice_environment`, dans `roles/factice/defaults/main.yml`.
 

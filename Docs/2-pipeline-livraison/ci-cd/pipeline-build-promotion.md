@@ -1,6 +1,6 @@
 # Pipeline CI/CD : du code à la production
 
-Le workflow `.github/workflows/ci.yml` s'exécute sur le runner auto-hébergé. Il applique le *trunk-based development* décrit dans [trunk-based.md](../../../trunk-based.md) et la gouvernance Nexus décrite dans [registry/README.md](../registry/README.md).
+Le workflow `.github/workflows/ci.yml` s'exécute sur le runner auto-hébergé. Il applique le *trunk-based development* décrit dans [trunk-based.md](../../trunk-based.md) et la gouvernance Nexus décrite dans [registry/README.md](../registry/README.md).
 
 ## Vue d'ensemble
 
@@ -28,8 +28,8 @@ sequenceDiagram
     R->>H: ansible-playbook, image tirée par empreinte (svc-deploiement)
     R->>H: contrôle de santé :8080/health
     Dev->>GH: déclenchement manuel, deploy_env = production
-    GH->>R: job deploy-production (environnement protégé)
-    R->>H: ansible-playbook, même empreinte
+    GH->>R: jobs build, promote puis deploy-production (environnement protégé)
+    R->>H: ansible-playbook, empreinte promue par cette exécution
     R->>H: contrôle de santé :9080/health
 ```
 
@@ -40,7 +40,7 @@ sequenceDiagram
 | `build` | push ou demande de fusion sur `main` | `svc-build-factice-app` | tests bloquants, construction de l'image, SBOM ; publication dans `docker-candidat` sauf sur une demande de fusion |
 | `promote` | push sur `main` uniquement | `svc-promotion` | contrôles puis republication dans `docker-release` avec le manifeste et le SBOM |
 | `deploy-integration` | push sur `main`, ou déclenchement manuel | `svc-deploiement` (lecture seule) | déploiement de la release par empreinte, contrôle de santé sur le port 8080, événement de déploiement |
-| `deploy-production` | déclenchement manuel (`deploy_env = production`) | `svc-deploiement` (lecture seule) | même déploiement sur le port 9080, environnement protégé |
+| `deploy-production` | déclenchement manuel (`deploy_env = production`) | `svc-deploiement` (lecture seule) | même déploiement sur le port 9080, environnement `production` ; dépend de `build` et `promote` |
 
 Les comptes sont cloisonnés : celui qui construit ne peut pas écrire en release, celui qui déploie ne fait que lire.
 
@@ -48,15 +48,17 @@ Les comptes sont cloisonnés : celui qui construit ne peut pas écrire en releas
 
 ```mermaid
 graph TD
-    A["build<br/>(tous les pushs + demande de fusion)"]
-    B["promote<br/>(push sur main seulement)"]
-    C["deploy-integration<br/>(auto après promote)"]
-    D["deploy-production<br/>(manuel indépendant)"]
-    
-    A -->|si push sur main| B
-    B -->|si promote réussi| C
-    D -->|workflows_dispatch| D
-    
+    A["build<br/>(push, demande de fusion, lancement manuel)"]
+    B["promote<br/>(hors demande de fusion, sur main)"]
+    C["deploy-integration<br/>(sur main, ou lancement manuel)"]
+    D["deploy-production<br/>(lancement manuel, deploy_env = production)"]
+
+    A --> B
+    A --> C
+    A --> D
+    B --> C
+    B --> D
+
     style A fill:#e3f2fd
     style B fill:#fff3e0
     style C fill:#e8f5e9
@@ -64,10 +66,11 @@ graph TD
 ```
 
 **Points clés :**
-- **build** exécute sur les demandes de fusion (tests seulement) et les pushs sur main
-- **promote** n'exécute qu'après un build sur main, et ne s'exécute pas sur une demande de fusion
-- **deploy-integration** s'exécute automatiquement après promote
-- **deploy-production** est manuel et indépendant : il n'attend pas build/promote, ce qui permet un rollback sans reconstruction
+
+- `build` s'exécute sur les demandes de fusion (tests et construction, rien n'est publié), sur les poussées vers `main` et sur les lancements manuels.
+- `promote` s'exécute uniquement quand la référence est `main` et que l'événement n'est pas une demande de fusion.
+- `deploy-integration` dépend de `build` et de `promote`. Il s'exécute sur `main` (poussée ou lancement manuel) : un lancement manuel depuis `main` avec `deploy_env = none` ou `production` déploie donc aussi l'intégration.
+- `deploy-production` dépend aussi de `build` et de `promote`. Il n'est **pas** indépendant : un lancement manuel de production reconstruit, republie et promeut le commit courant de `main`, puis déploie **l'empreinte qui vient d'être promue**, pas nécessairement celle validée en intégration. Voir les écarts plus bas.
 
 ## Étape `build`
 
@@ -102,41 +105,41 @@ L'image est tirée par empreinte : ce qui tourne est exactement ce qui a été p
 |---|---|---|
 | **Port HTTP** | 8080 | 9080 |
 | **Base de données** | 5432 | 5433 |
-| **Déploiement** | Automatique à chaque push sur `main` | Manuel via `workflow_dispatch` |
+| **Déploiement** | Automatique à chaque poussée sur `main` | Manuel via `workflow_dispatch` |
 | **Rôle** | Validation rapide du candidat en conditions réalistes | Décision humaine, avant mise en service réelle |
-| **Sur le même Mac Mini ?** | Oui | Oui |
+| **Sur le même hôte macOS ?** | Oui | Oui |
 | **Isolement** | Oui : ports, DB, utilisateurs distincts | Oui : ports, DB, utilisateurs distincts |
 
 **Pourquoi deux environnements sur le même hôte ?**
 
-1. Valider en intégration après chaque push (feedback < 5 min)
+1. Valider en intégration après chaque poussée sur `main`
 2. Garder une réplique du code et de la config avant le déploiement manuel en production
 3. Économiser l'infrastructure (un seul hôte)
 4. Les deux peuvent coexister sans conflit (ports ≠, BDD ≠, users ≠)
 
 ## Retour arrière et rollback
 
-**Trois opérations, même mécanisme :**
+Le workflow n'a **pas d'entrée « empreinte »** : il ne sait pas redéployer une ancienne release. Le retour arrière est donc une opération **manuelle** sur l'hôte, qui relance le playbook avec l'empreinte voulue.
 
-| Opération | Définition | Quand ? | Effet |
+| Opération | Définition | Quand | Effet |
 |---|---|---|---|
-| **Redéploiement** | Relancer ansible avec la **même empreinte** | Configuration change (playbook modifié, secret renouvelé) | `changed=0` si rien de nouveau, sinon redémarrage léger des services |
-| **Idempotence** | Même playbook, même image → pas de changement | Relance accidentelle ou test | Sûr, aucun redémarrage |
-| **Rollback** | Relancer ansible avec une **ancienne empreinte** | Incident : retour à la version précédente | Tirage de l'ancienne image, redéploiement complet des trois tiers |
-
-Tous s'exécutent via le même `ansible-playbook` :
+| **Redéploiement** | même playbook, **même empreinte** | configuration modifiée, secret renouvelé | `changed=0` si rien n'a changé, sinon redémarrage des services concernés |
+| **Idempotence** | même playbook, même image | relance accidentelle, test | aucun changement |
+| **Retour arrière** | playbook relancé avec une **ancienne empreinte** | incident : retour à la version précédente | tirage de l'ancienne image, redéploiement des trois tiers |
 
 ```bash
-# Retrouver l'ancienne empreinte : voir l'historique Nexus
-# https://<nexus-url>/service/rest/v1/repositories/docker-release/components?sort=-lastModified
-# ou dans GitHub Actions history, logs du job promote
+# Retrouver l'ancienne empreinte : liste des composants de docker-release
+#   https://<nexus-url>/service/rest/v1/components?repository=docker-release
+# ou le journal du job promote d'une exécution antérieure.
 
 ansible-playbook deploy-factice-production.yml \
   --vault-password-file ~/.factice-vault-pass \
-  -e "factice_release_image=<hôte>/factice.app/factice@<ancienne-empreinte>"
+  -e "factice_release_image=<hôte release>/factice.app/factice@<ancienne-empreinte>"
 ```
 
-Aucune reconstruction n'a lieu : on tire une image déjà promue et immuable.
+Aucune reconstruction n'a lieu : l'image est déjà promue et immuable. Le compte de déploiement doit pouvoir lire la release, pas l'écrire.
+
+Le retour arrière n'annule pas les migrations de base de données. Une migration destructive doit suivre le schéma *expand / contract* (ajouter, basculer, puis supprimer dans une release ultérieure) pour que l'ancienne image reste compatible avec la base. Voir [bonnes-pratiques-ansible.md](../orchestration/bonnes-pratiques-ansible.md).
 
 ## Artefacts du workflow
 
@@ -152,13 +155,9 @@ factice/
 └── app/                               # Application Node.js
 ```
 
-Le runner clone le dépôt au début du job → tous les playbooks et rôles sont disponibles. **Pas d'artifact externe, pas de provisioning préalable.** Tout est versionnée avec le code.
+Le runner clone le dépôt au début du job → tous les playbooks et rôles sont disponibles. **Pas d'artifact externe, pas de provisioning préalable.** Tout est versionné avec le code.
 
-**Temporalité :**
-- Job `build` : ~3 min (npm ci, npm test, docker build)
-- Job `promote` : ~30 s (API Nexus)
-- Job `deploy-integration` : ~5 min (Ansible orchestration)
-- Job `deploy-production` : ~5 min (Ansible orchestration)
+**Durées.** Aucune mesure n'est consignée dans le dépôt. Elles se lisent dans l'historique des exécutions GitHub Actions ; ce sont aussi les entrées du délai de livraison suivi par les mesures DORA (voir [securite-pipeline.md](securite-pipeline.md), section 11).
 
 ## Configuration du dépôt
 
@@ -171,3 +170,21 @@ Le runner clone le dépôt au début du job → tous les playbooks et rôles son
 | Secret | `CMDB_TOKEN` | jeton de l'événement de déploiement (facultatif) |
 
 Aucun secret n'est passé en argument de commande. Le mot de passe du coffre Ansible est lu dans `~/.factice-vault-pass` sur le runner.
+
+## Écarts connus
+
+| Écart | Constat dans le workflow | Conséquence | Cible |
+|---|---|---|---|
+| Production non indépendante | `deploy-production` a `needs: [build, promote]` | un lancement manuel reconstruit et republie ; la production reçoit l'empreinte de cette exécution, pas celle testée en intégration | déployer en production une empreinte existante, fournie en entrée du workflow, ce qui permet aussi le retour arrière par le workflow |
+| Intégration relancée par un lancement manuel | `deploy-integration` s'exécute dès que la référence est `main` | un lancement manuel destiné à la production redéploie aussi l'intégration | conditionner l'intégration à l'événement `push` ou à `deploy_env = integration` |
+| Confirmation interactive en production | le playbook `deploy-factice-production.yml` contient une tâche `pause` suivie d'un `assert` | sur un runner sans terminal, la confirmation ne peut pas être saisie ; le comportement exact est à vérifier. La confirmation humaine est déjà portée par l'environnement `production` de GitHub | retirer la pause du playbook et garder l'approbation de l'environnement |
+| Contrôles de qualité | seul `npm test` est exécuté ; le script `lint` existe mais l'analyseur n'est pas une dépendance du projet | pas de contrôle de style ni de type en CI, contrairement à ce que laisse entendre [trunk-based.md](../../trunk-based.md) | ajouter l'analyseur et l'étape de lint |
+| Sécurité du pipeline | pas de `permissions`, de `concurrency`, de délai maximal, d'analyse ni de signature | voir [securite-pipeline.md](securite-pipeline.md) | plan d'adoption de ce document |
+
+## Références
+
+- [securite-pipeline.md](securite-pipeline.md) : durcissement, analyse, signature
+- [trunk-based.md](../../trunk-based.md) : modèle de branches
+- [registry/README.md](../registry/README.md) : gouvernance des artefacts
+- [orchestration/workflow-ansible.md](../orchestration/workflow-ansible.md) : exécution des déploiements
+- GitHub, [Deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments)

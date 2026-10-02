@@ -2,7 +2,7 @@
 
 *Tout en code, de la configuration de Nexus au déploiement. Décision d'architecture, 30 septembre 2026.*
 
-Présentation en 10 slides pour un directeur. Chaque section correspond à une slide, avec son message clé, son contenu et des notes pour l'orateur. Le détail se trouve dans le [dossier d'architecture](dossier-architecture-automatisation.md), qui prolonge le [dossier Nexus](../nexus/dossier-architecture-nexus.md).
+Présentation en 10 slides pour un directeur. Chaque section correspond à une slide, avec son message clé, son contenu et des notes pour l'orateur. Le détail se trouve dans le [dossier d'architecture](architecture-automatisation.md), qui prolonge le [dossier Nexus](../../2-pipeline-livraison/registry/nexus-architecture.md).
 
 ## Plan
 

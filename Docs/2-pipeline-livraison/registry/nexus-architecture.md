@@ -7,7 +7,7 @@ Version 5 (enrichie), 2026-09-30
 | Statut | Proposé |
 | Périmètre | Gouvernance des artefacts logiciels, de la publication à la CMDB |
 | Points ouverts | Aucun à ce stade, voir section 9 |
-| Documents liés | [Présentation directeur](presentation-nexus-directeur.md), [Spécification d'implémentation](spec-implementation-nexus.md) |
+| Documents liés | [Présentation directeur](nexus-presentation.md), [Spécification d'implémentation](nexus-spec.md) |
 
 ## 1. Synthèse et décision
 

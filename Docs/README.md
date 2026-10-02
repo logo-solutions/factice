@@ -2,7 +2,7 @@
 
 **factice** est une application de référence qui sert à valider un pattern de déploiement Ansible et la chaîne de livraison autour de Nexus : build, candidat, promotion, release, déploiement par empreinte.
 
-Elle tourne sur un Mac Mini, avec une architecture hétérogène à trois tiers :
+Elle tourne sur un hôte macOS, avec une architecture hétérogène à trois tiers :
 
 | Tier | Technologie | Géré par |
 |---|---|---|
@@ -15,7 +15,7 @@ Elle tourne sur un Mac Mini, avec une architecture hétérogène à trois tiers 
 1. Disposer d'un rôle Ansible générique, `deploy_stack`, qui déploie un conteneur Docker de façon réutilisable et idempotente.
 2. Prouver ce rôle sur une application réelle, avec des tests de bout en bout.
 3. Documenter l'orchestration de services natifs (Homebrew et LaunchAgent) par Ansible, sans Docker.
-4. Mettre en œuvre la gouvernance des artefacts décrite dans `Docs/nexus/` : dépôts candidat et release, promotion contrôlée, immuabilité des releases.
+4. Mettre en œuvre la gouvernance des artefacts décrite dans `Docs/2-pipeline-livraison/registry/` : dépôts candidat et release, promotion contrôlée, immuabilité des releases.
 
 **Hors périmètre** : multi-hôte, TLS (HTTP local uniquement), répartition de charge, autres applications.
 
@@ -36,8 +36,8 @@ Elle tourne sur un Mac Mini, avec une architecture hétérogène à trois tiers 
 
 | Section | Contenu |
 |---|---|
-| [1-fondations/](1-fondations/README.md) | Flux, réseau, zones de sécurité |
-| [2-pipeline-livraison/](2-pipeline-livraison/README.md) | CI/CD, Registry Nexus, Workflows Ansible |
+| [1-fondations/](1-fondations/README.md) | Flux, zones de sécurité, modèle de menaces |
+| [2-pipeline-livraison/](2-pipeline-livraison/README.md) | CI/CD et sécurité du pipeline, Registry Nexus, Ansible et bonnes pratiques |
 | [3-observabilite/](3-observabilite/README.md) | Métriques, alertes, logs, traces, APM |
 | [4-securite/](4-securite/README.md) | Isolation réseau, secrets, audit, conformité |
 | [5-gouvernance/](5-gouvernance/README.md) | Standards, guidelines, automatisation |
@@ -89,7 +89,7 @@ Aucune étiquette `latest` n'est utilisée. Une release est immuable.
 
 ### Prérequis
 
-- Mac Mini avec Docker (Colima), Ansible et les collections Ansible utilisées par les rôles.
+- Hôte macOS avec Docker (Colima), Ansible et les collections Ansible utilisées par les rôles.
 - Nexus Repository 3 Community, géré par `roles/nexus` ou déjà en service.
 - Runner GitHub Actions auto-hébergé, installé par `roles/github_runner`.
 
@@ -112,7 +112,7 @@ ansible-playbook provision-nexus.yml \
   -e nexus_eula_accepted=true -e @nexus-admin.yml
 ```
 
-`nexus_eula_accepted=true` est une décision de l'exploitant : la licence de la Community Edition n'est jamais acceptée par défaut. Le conteneur doit publier les ports Docker 5001 à 5004 (candidat, release, proxy, groupe). Détails dans [nexus/README.md](nexus/README.md).
+`nexus_eula_accepted=true` est une décision de l'exploitant : la licence de la Community Edition n'est jamais acceptée par défaut. Le conteneur doit publier les ports Docker 5001 à 5004 (candidat, release, proxy, groupe). Détails dans [registry/README.md](2-pipeline-livraison/registry/README.md).
 
 ### Déployer
 
@@ -151,12 +151,25 @@ La recette joue le cycle complet (publication, promotion) puis contrôle R1, R2,
 | AC10 | Isolation des environnements | Bases et utilisateurs distincts entre intégration et production |
 | AC11 | Chaîne complète | Reverse proxy, conteneur applicatif, PostgreSQL |
 
+### Critères proposés (pas encore applicables)
+
+Ces critères traduisent les cibles de [securite-pipeline.md](2-pipeline-livraison/ci-cd/securite-pipeline.md) et de [bonnes-pratiques-ansible.md](2-pipeline-livraison/orchestration/bonnes-pratiques-ansible.md). Ils ne sont pas retenus tant que le workflow et les rôles ne les mettent pas en œuvre.
+
+| N° | Critère | Vérification envisagée |
+|---|---|---|
+| AC12 | Analyse statique | `ansible-lint` (profil `production`), `yamllint` et `actionlint` sans erreur |
+| AC13 | Analyse des vulnérabilités | aucune vulnérabilité `CRITICAL` ou `HIGH` corrigeable dans l'image promue |
+| AC14 | Signature vérifiée | `cosign verify` réussi sur l'empreinte avant chaque déploiement |
+| AC15 | Droits minimaux | workflow avec `permissions` explicites ; relecteurs obligatoires sur `production` |
+| AC16 | Secrets chiffrés | aucun secret en clair dans le dépôt ; `vault.yml` chiffré |
+| AC17 | Exposition maîtrisée | balayage depuis une autre machine : seuls les ports prévus répondent |
+
 ## Limites connues
 
 - Le déploiement complet des deux environnements (connexion du conteneur à PostgreSQL, démarrage du LaunchAgent Caddy, tirage d'une release) n'a pas encore été joué de bout en bout : seuls la syntaxe des playbooks et la validité du Caddyfile sont contrôlées.
 - Aucun runner GitHub n'est encore enregistré : la CI ne s'exécute pas tant que `roles/github_runner` n'a pas été appliqué.
 - Le fichier `inventory/group_vars/local/vault.yml` contient des valeurs de remplacement en clair, à chiffrer avec `ansible-vault`.
-- Écarts de la mise en œuvre Nexus avec la spécification (promotion par republication, pas d'analyse de vulnérabilités, un port par dépôt Docker, etc.) : voir [nexus/README.md](nexus/README.md).
+- Écarts de la mise en œuvre Nexus avec la spécification (promotion par republication, pas d'analyse de vulnérabilités, un port par dépôt Docker, etc.) : voir [registry/README.md](2-pipeline-livraison/registry/README.md).
 
 ## Dépôt GitHub
 

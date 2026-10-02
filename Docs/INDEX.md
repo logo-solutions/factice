@@ -16,8 +16,9 @@
 
 **[1-fondations/](1-fondations/README.md)**
 
-- [flux-et-reseau.md](1-fondations/flux-et-reseau.md) — Flux entre composants, zones de sécurité
-- [zones-securite.md](1-fondations/zones-securite.md) — Segmentation réseau
+- [flux-et-reseau.md](1-fondations/flux-et-reseau.md) — Flux réels, diagramme avec frontières de confiance
+- [zones-securite.md](1-fondations/zones-securite.md) — Zones, frontières, accès d'administration
+- [modele-menaces.md](1-fondations/modele-menaces.md) — Analyse STRIDE et mesures prioritaires
 
 ### 2️⃣ Socle : pipeline de livraison
 
@@ -25,7 +26,8 @@
 
 #### CI/CD
 **[ci-cd/](2-pipeline-livraison/ci-cd/README.md)**
-- [pipeline-build-promotion.md](2-pipeline-livraison/ci-cd/pipeline-build-promotion.md) — Build, tests, publication, promotion (4 étapes)
+- [pipeline-build-promotion.md](2-pipeline-livraison/ci-cd/pipeline-build-promotion.md) — Build, tests, publication, promotion (4 étapes), écarts connus
+- [securite-pipeline.md](2-pipeline-livraison/ci-cd/securite-pipeline.md) — Durcissement, analyse, signature : état, écart, cible
 
 #### Registry (Nexus)
 **[registry/](2-pipeline-livraison/registry/README.md)**
@@ -36,7 +38,8 @@
 #### Orchestration (Ansible)
 **[orchestration/](2-pipeline-livraison/orchestration/README.md)**
 - [workflow-ansible.md](2-pipeline-livraison/orchestration/workflow-ansible.md) — Orchestration des 3 tiers (BDD, App, Web), contrôles de santé
-- [deploy-stack-contract.md](2-pipeline-livraison/orchestration/deploy-stack-contract.md) — Contrat du rôle générique `deploy_stack`
+- [deploy-stack-contract.md](2-pipeline-livraison/orchestration/deploy-stack-contract.md) — Contrat du rôle générique `deploy_stack` et écarts
+- [bonnes-pratiques-ansible.md](2-pipeline-livraison/orchestration/bonnes-pratiques-ansible.md) — Qualité, tests, secrets, déploiement : état, écart, cible
 
 ### 3️⃣ Observabilité : visibilité et traçabilité
 

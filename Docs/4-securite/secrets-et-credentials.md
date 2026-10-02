@@ -1,3 +1,5 @@
+> **État réel.** Ce document décrit une cible générale ; plusieurs exemples ne correspondent pas à la mise en œuvre. Aujourd'hui : le workflow utilise les secrets `NEXUS_BUILD_PASSWORD`, `NEXUS_PROMOTION_PASSWORD`, `NEXUS_DEPLOY_PASSWORD` (un par compte de service) et passe le mot de passe par variable d'environnement ; le runner est auto-hébergé ; `vault.yml` contient des valeurs de remplacement **en clair**, non chiffrées ; aucune analyse de secrets n'est exécutée en CI. Voir [bonnes-pratiques-ansible.md](../2-pipeline-livraison/orchestration/bonnes-pratiques-ansible.md), section 6, et [securite-pipeline.md](../2-pipeline-livraison/ci-cd/securite-pipeline.md), section 9.
+
 # Secrets et credentials
 
 ## Gestion centralisée des secrets
