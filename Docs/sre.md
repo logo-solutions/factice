@@ -65,7 +65,7 @@
 | Sauvegarde + test de restauration | 10 | 10 | 10 |
 | Anonymisation des données | 0 | 5 | 10 |
 | Monitoring des requêtes lentes | 0 | 5 | 10 |
-| **WORKFLOW & ORCHESTRATION** | COTS | Low code | Dev inhouse |
+| **WORKFLOW & ORCHESTRATION** | | | |
 |---|---|---|---|
 | Workflows Ansible chaînés (déploiement → smoke tests → notification) | 10 | 10 | 10 |
 | Pipeline de build CI/CD (code source + déploiement + configuration) | 5 | 10 | 10 |
