@@ -17,6 +17,7 @@
 **[1-fondations/](1-fondations/README.md)**
 
 - [flux-et-reseau.md](1-fondations/flux-et-reseau.md) — Flux réels, diagramme avec frontières de confiance
+- [flux-outils.md](1-fondations/flux-outils.md) — Flux cibles entre outils (exigences, ITSM, GitLab, registry, CMDB, documentation), décisions
 - [zones-securite.md](1-fondations/zones-securite.md) — Zones, frontières, accès d'administration
 - [modele-menaces.md](1-fondations/modele-menaces.md) — Analyse STRIDE et mesures prioritaires
 

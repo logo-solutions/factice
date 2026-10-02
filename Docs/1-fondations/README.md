@@ -9,6 +9,7 @@ Comprendre comment les composants (CI/CD, Registry, Ansible, hôte) communiquent
 | Document | Contenu |
 |---|---|
 | [flux-et-reseau.md](flux-et-reseau.md) | Flux réels du pipeline, diagramme avec frontières de confiance, chiffrement en transit |
+| [flux-outils.md](flux-outils.md) | Flux cibles entre les outils de la chaîne (exigences, ITSM, GitLab, registry, CMDB, documentation) et décisions associées |
 | [zones-securite.md](zones-securite.md) | Zones de sécurité, frontières de confiance, accès d'administration, isolation des environnements |
 | [modele-menaces.md](modele-menaces.md) | Analyse STRIDE aux frontières de confiance, mesures prioritaires |
 
