@@ -65,17 +65,15 @@
 | Sauvegarde + test de restauration | 10 | 10 | 10 |
 | Anonymisation des données | 0 | 5 | 10 |
 | Monitoring des requêtes lentes | 0 | 5 | 10 |
-| **WORKFLOW & ORCHESTRATION** | | | |
-| Workflows Ansible chaînés (déploiement → smoke tests → notification) ¹ | 10 | 10 | 10 |
-| Pipeline de build CI/CD ² (code source + déploiement + configuration) | 5 | 10 | 10 |
-| Promotion entre environnements avec gates (dev → recette → prod) ² | 10 | 10 | 10 |
-| Validation humaine intégrée (change, ITSM) ¹ | 10 | 10 | 10 |
-| Déclenchement événementiel (webhook registry → Ansible) ¹ | 10 | 10 | 10 |
-| Réconciliation CMDB après déploiement ¹ | 10 | 10 | 10 |
+| **WORKFLOW & ORCHESTRATION** | COTS | Low code | Dev inhouse |
+|---|---|---|---|
+| Workflows Ansible chaînés (déploiement → smoke tests → notification) | 10 | 10 | 10 |
+| Pipeline de build CI/CD (code source + déploiement + configuration) | 5 | 10 | 10 |
+| Promotion entre environnements avec gates (dev → recette → prod) | 10 | 10 | 10 |
+| Validation humaine intégrée (change, ITSM) | 10 | 10 | 10 |
+| Déclenchement événementiel (webhook registry → Ansible) | 10 | 10 | 10 |
+| Réconciliation CMDB après déploiement | 10 | 10 | 10 |
 | Workflows métier internes aux applications (ex. circuits d'approbation) | 0 | 5 | 10 |
-
-¹ = Workflow **Ansible** (orchestration de déploiement)  
-² = Workflow **CI/CD** (GitHub Actions, build et promotion)
 
 | **REGISTRY** | | | |
 |---|---|---|---|
