@@ -76,6 +76,7 @@
 
 ¹ = Workflow **Ansible** (orchestration de déploiement)  
 ² = Workflow **CI/CD** (GitHub Actions, build et promotion)
+
 | **REGISTRY** | | | |
 | Stockage versionné et immuable des artefacts | 10 | 10 | 10 |
 | Normalisation du nommage à l'ingestion | 10 | 10 | 10 |
