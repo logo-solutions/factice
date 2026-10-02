@@ -78,6 +78,7 @@
 ² = Workflow **CI/CD** (GitHub Actions, build et promotion)
 
 | **REGISTRY** | | | |
+|---|---|---|---|
 | Stockage versionné et immuable des artefacts | 10 | 10 | 10 |
 | Normalisation du nommage à l'ingestion | 10 | 10 | 10 |
 | Métadonnées d'identité (buildSha, checksums) | 5 | 5 | 10 |
@@ -88,6 +89,7 @@
 | Promotion de repo (staging → release) | 10 | 10 | 10 |
 | Rétention / nettoyage | 10 | 10 | 10 |
 | **RELEASES** | | | |
+|---|---|---|---|
 | Version bumping semver automatique | 0 | 5 | 10 |
 | Génération des release notes | 0 | 5 | 10 |
 | Signature des artefacts que nous produisons | 0 | 5 | 10 |
