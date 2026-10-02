@@ -66,13 +66,16 @@
 | Anonymisation des données | 0 | 5 | 10 |
 | Monitoring des requêtes lentes | 0 | 5 | 10 |
 | **WORKFLOW & ORCHESTRATION** | | | |
-| Workflows Ansible chaînés (déploiement → smoke tests → notification) | 10 | 10 | 10 |
-| Pipeline de build CI | 0 | 5 | 10 |
-| Promotion entre environnements avec gates (dev → recette → prod) | 10 | 10 | 10 |
-| Validation humaine intégrée (change, ITSM) | 10 | 10 | 10 |
-| Déclenchement événementiel (webhook registry → Ansible) | 10 | 10 | 10 |
-| Réconciliation CMDB après déploiement | 10 | 10 | 10 |
+| Workflows Ansible chaînés (déploiement → smoke tests → notification) ¹ | 10 | 10 | 10 |
+| Pipeline de build CI/CD ² (code source + déploiement + configuration) | 5 | 10 | 10 |
+| Promotion entre environnements avec gates (dev → recette → prod) ² | 10 | 10 | 10 |
+| Validation humaine intégrée (change, ITSM) ¹ | 10 | 10 | 10 |
+| Déclenchement événementiel (webhook registry → Ansible) ¹ | 10 | 10 | 10 |
+| Réconciliation CMDB après déploiement ¹ | 10 | 10 | 10 |
 | Workflows métier internes aux applications (ex. circuits d'approbation) | 0 | 5 | 10 |
+
+¹ = Workflow **Ansible** (orchestration de déploiement)  
+² = Workflow **CI/CD** (GitHub Actions, build et promotion)
 | **REGISTRY** | | | |
 | Stockage versionné et immuable des artefacts | 10 | 10 | 10 |
 | Normalisation du nommage à l'ingestion | 10 | 10 | 10 |
@@ -97,7 +100,7 @@
 
 **Dev inhouse** : presque tout à 10, mais tout est à construire et à maintenir.
 
-**Workflow et registry** sont les deux blocs où les trois colonnes convergent le plus. C'est le socle commun à industrialiser en premier.
+**Pipeline CI/CD, Workflows Ansible et Registry** sont les trois blocs où les trois colonnes convergent le plus. C'est le socle commun à industrialiser en premier, car ils forment une chaîne indissociable : CI/CD → Registry → Workflows Ansible.
 
 ## Contexte
 
@@ -134,7 +137,7 @@ Applications avec des formes de livraison hétérogènes : sources Java, contene
 | Artefacts avec métadonnées d'identité conformes | KPI | À mesurer | À définir |
 | Taux de rapprochement registry / CMDB | KPI | À mesurer | ≥ 95 % (pressentie) |
 | Délai de synchronisation registry vers CMDB | SLO | Sans objet | < 10 s (pressentie) |
-| Délai d'approbation d'un artefact | SLO | À mesurer | À définir par catégorie |
+| Délai d'approbation d'un artefact (par workflow CI/CD) | SLO | À mesurer | À définir par catégorie |
 
 ## Livrables
 
@@ -149,13 +152,13 @@ Applications avec des formes de livraison hétérogènes : sources Java, contene
 
 ## Phasage et premiers lots
 
-Proposition à valider. Les durées et les applications pilotes restent à définir. Les premiers lots (0, 1 et 2) portent sur les deux priorités : registry et workflows.
+Proposition à valider. Les durées et les applications pilotes restent à définir. Les premiers lots (0, 1, 2 et 4) portent sur les trois priorités : Pipeline CI/CD, Registry et Workflows Ansible.
 
 | Lot | Contenu | Prérequis | Sortie attendue |
 |---|---|---|---|
 | **0 – Cadrage** | Périmètre, répartition des applications par type (COTS, low code, dev inhouse), décideurs, mesure de l'état initial des KPI, registre des décisions | Sponsor identifié | Note de cadrage validée, situation de départ chiffrée |
 | **1 – Registry** | DAT registry, organisation des dépôts, métadonnées, script d'ingestion, RBAC, sauvegarde et haute disponibilité | Lot 0 | Registry opérationnel avec 2 ou 3 applications pilotes couvrant des formes de livraison différentes |
-| **2 – Workflows (Ansible)** | DAT Ansible, standards de rôles et playbooks, workflows chaînés, gates de promotion, déclenchement par événement, réconciliation CMDB | Lot 1 | Déploiement des applications pilotes de bout en bout via workflow |
+| **2 – Workflows Ansible** | DAT Ansible, standards de rôles et playbooks, workflows Ansible chaînés, gates de promotion, déclenchement par événement, réconciliation CMDB | Lot 1 | Déploiement des applications pilotes de bout en bout via workflow Ansible |
 | **3 – Sécurité de la chaîne** | Scans CVE et licences à l'ingestion, mirror avec liste blanche, gestion des secrets, signature et vérification des checksums | Lot 1 | Point de contrôle unique actif à l'ingestion |
 | **4 – CI/CD** | Pipelines types par forme de livraison, stratégie de tests, versionnage | Lots 1 et 2 | Pipelines réutilisables par les équipes |
 | **5 – Exploitation et gouvernance** | DEX, PRA, suivi des KPI et SLO, circuit d'approbation, conduite du changement | Lots 1 à 3 | Exploitation transférée, indicateurs suivis |
@@ -182,7 +185,7 @@ Probabilité et impact sont des estimations de départ, à valider avec les part
 
 La note est validée lorsque les priorités suivantes sont actées par les décideurs :
 
-1. Registry et workflows industrialisés en premier, comme socle commun.
+1. Pipeline CI/CD, Registry et Workflows Ansible industrialisés en premier comme socle commun indissociable.
 2. Périmètre arrêté, avec la répartition des applications entre COTS, low code et dev inhouse.
 3. Objectifs mesurables (KPI et SLO) fixés, avec situation de départ et cible.
 4. Point de contrôle unique de la chaine de livraison à l'ingestion.
@@ -226,10 +229,10 @@ Proposition : 3 lots majeurs sur **application pilote**
 - Pipeline build/test/package automatisé (GitHub Actions)
 - Sortie : App pilote : push → image dans registry (automatique)
 
-**Lot 3 – Workflow de livraison**
+**Lot 3 – Workflow Ansible de livraison**
 - Promotion dev→recette→prod (Ansible)
 - Gates de promotion, validations
-- Sortie : App pilote déployée end-to-end via workflow
+- Sortie : App pilote déployée end-to-end via workflow Ansible
 
 ### Rôles clés
 

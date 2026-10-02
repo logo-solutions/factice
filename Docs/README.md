@@ -1,223 +1,163 @@
-# Projet factice — Application modèle 3-tiers avec Ansible IaC
+# factice — Application modèle 3-tiers déployée par Ansible
 
-## Vue d'ensemble
+**factice** est une application de référence qui sert à valider un pattern de déploiement Ansible et la chaîne de livraison autour de Nexus : build, candidat, promotion, release, déploiement par empreinte.
 
-**factice** est une application de référence conçue pour valider et documenter un pattern Ansible générique de déploiement (`roles/deploy_stack`).
+Elle tourne sur un Mac Mini, avec une architecture hétérogène à trois tiers :
 
-L'application démontre une architecture **hétérogène à 3 tiers** :
-- **Tier App** : conteneur Docker (Node.js/Express) — géré par `deploy_stack`
-- **Tier Web** : reverse proxy natif (Caddy ou nginx) — processus macOS LaunchAgent
-- **Tier BDD** : base de données native (PostgreSQL) — service Homebrew
+| Tier | Technologie | Géré par |
+|---|---|---|
+| App | Conteneur Docker (Node.js / Express) | `roles/deploy_stack` |
+| Web | Reverse proxy Caddy natif, LaunchAgent macOS | `roles/factice` |
+| BDD | PostgreSQL natif, service Homebrew | `roles/factice` |
 
-### Objectifs
+## Objectifs
 
-1. **Factoriser un rôle Ansible générique** : créer `roles/deploy_stack` qui gère le déploiement de conteneurs Docker de façon réutilisable et idempotente
-2. **Valider le pattern** : prouver que `deploy_stack` fonctionne sur une application réelle (tests end-to-end)
-3. **Documenter les patterns natifs** : montrer comment orchestrer des services Homebrew + LaunchAgent (tier Web et BDD) via Ansible, sans Docker
+1. Disposer d'un rôle Ansible générique, `deploy_stack`, qui déploie un conteneur Docker de façon réutilisable et idempotente.
+2. Prouver ce rôle sur une application réelle, avec des tests de bout en bout.
+3. Documenter l'orchestration de services natifs (Homebrew et LaunchAgent) par Ansible, sans Docker.
+4. Mettre en œuvre la gouvernance des artefacts décrite dans `Docs/nexus/` : dépôts candidat et release, promotion contrôlée, immuabilité des releases.
 
-### Scope
+**Hors périmètre** : multi-hôte, TLS (HTTP local uniquement), répartition de charge, autres applications.
 
-**Inclus :**
-- Rôle générique `deploy_stack` pour conteneurs Docker
-- Rôles de support : `nexus`, `github_runner`, `factice`
-- Application factice complète (code + CI/CD)
-- Documentation architecture + diagrammes Mermaid
+## Documentation
 
-**Explicitement hors scope :**
-- Multi-host infrastructure (local macOS uniquement)
-- SSL/TLS (HTTP local seulement)
-- Load balancing ou clustering
-- Autres applications réelles — factice est un PoC standalone
+### Vue d'ensemble
 
-## Structure du repo
+| Document | Contenu |
+|---|---|
+| [INDEX.md](INDEX.md) | Index hiérarchique complet |
+| [architecture-3tiers.md](architecture-3tiers.md) | Les trois tiers et leur orchestration |
+| [sre.md](sre.md) | Transformation et industrialisation |
+| [sre-factice.md](sre-factice.md) | Matrice SRE appliquée à factice |
+| [decisions.md](decisions.md) | Choix d'architecture et leurs raisons |
+| [trunk-based.md](trunk-based.md) | Flux de travail Git : tronc unique, branches courtes |
+
+### Sections (hiérarchie 5 niveaux)
+
+| Section | Contenu |
+|---|---|
+| [1-fondations/](1-fondations/README.md) | Flux, réseau, zones de sécurité |
+| [2-pipeline-livraison/](2-pipeline-livraison/README.md) | CI/CD, Registry Nexus, Workflows Ansible |
+| [3-observabilite/](3-observabilite/README.md) | Métriques, alertes, logs, traces, APM |
+| [4-securite/](4-securite/README.md) | Isolation réseau, secrets, audit, conformité |
+| [5-gouvernance/](5-gouvernance/README.md) | Standards, guidelines, automatisation |
+
+## Structure du dépôt
 
 ```
 factice/
-├── Docs/
-│   ├── README.md              # ce fichier
-│   ├── architecture.md        # vue d'ensemble architecture 3-tiers
-│   ├── flux-cicd.md           # diagramme Mermaid : CI/CD (push → runner → Nexus)
-│   ├── flux-deploiement.md    # diagramme Mermaid : orchestration Ansible
-│   ├── contrat-deploy-stack.md # contrat d'appel du rôle générique
-│   └── decisions.md           # choix d'architecture (pourquoi Node.js, PostgreSQL natif, etc.)
-├── app/
-│   ├── src/
-│   │   └── index.js           # serveur Express minimal
-│   ├── package.json
+├── Docs/                          # documentation (ce dossier)
+├── app/                           # application Node.js / Express
+│   ├── src/index.js
+│   ├── tests/
 │   └── Dockerfile
-├── .github/workflows/
-│   └── ci.yml                 # workflow CI : build + push Nexus
-└── .gitignore
+├── roles/
+│   ├── deploy_stack/              # rôle générique de déploiement Docker
+│   ├── factice/                   # orchestration des trois tiers
+│   ├── nexus/                     # dépôts, droits, nettoyage, conformité
+│   └── github_runner/             # runner GitHub Actions auto-hébergé
+├── scripts/nexus/                 # publication, promotion, SBOM, événement, recette
+├── inventory/                     # hôte local et variables
+├── deploy-factice-integration.yml
+├── deploy-factice-production.yml
+├── provision-nexus.yml
+└── .github/workflows/ci.yml
 ```
 
-## Démarrer avec factice
+## Environnements
+
+| | Intégration | Production |
+|---|---|---|
+| Déclenchement | Automatique à chaque push sur `main` | Manuel (`workflow_dispatch`), environnement GitHub protégé |
+| Santé | `http://localhost:8080/health` | `http://localhost:9080/health` |
+| Conteneur applicatif | port 3000 | port 3001 |
+| PostgreSQL | port 5432, base et utilisateur `factice_integration` | port 5433, base et utilisateur `factice_production` |
+
+Chaque environnement a son propre répertoire d'installation, sa base, son utilisateur de base de données et ses secrets.
+
+## Chaîne CI/CD
+
+Le workflow `.github/workflows/ci.yml` s'exécute sur le runner auto-hébergé :
+
+1. **build** : tests bloquants, génération du SBOM, publication de l'image dans `docker-candidat` (compte `svc-build-factice-app`).
+2. **promote** : contrôles de complétude, de provenance (le commit appartient à une branche protégée) et d'empreinte, puis republication dans `docker-release` avec le manifeste et le SBOM (compte `svc-promotion`).
+3. **deploy-integration** et **deploy-production** : déploiement de l'image release par empreinte (compte `svc-deploiement`, lecture seule), contrôle de santé, puis événement de déploiement.
+
+Aucune étiquette `latest` n'est utilisée. Une release est immuable.
+
+## Mise en route
 
 ### Prérequis
 
-- Mac Mini avec NAS-LOGO Ansible déployé
-- Nexus instance (sera déployé par `roles/nexus`)
-- Runner GitHub Actions self-hosted (sera installé par `roles/github_runner`)
+- Mac Mini avec Docker (Colima), Ansible et les collections Ansible utilisées par les rôles.
+- Nexus Repository 3 Community, géré par `roles/nexus` ou déjà en service.
+- Runner GitHub Actions auto-hébergé, installé par `roles/github_runner`.
 
-### Implémentation (Composants 0-6)
+### Secrets
 
-| Composant | Tâche | Status |
-|---|---|---|
-| 0 | Documentation (6 MD + Mermaid) | ✅ |
-| 1-2 | `deploy_stack` + `roles/nexus` (NAS-LOGO) | ✅ |
-| 3 | `roles/github_runner` (NAS-LOGO) | ✅ |
-| 4 | Application code + CI/CD workflow | ✅ |
-| 5 | `roles/factice` orchestration (NAS-LOGO) | ✅ |
-| 6 | Multi-environment strategy (integration + production) | ✅ |
+| Secret | Emplacement |
+|---|---|
+| Mots de passe de l'inventaire (`vault_*`) | `inventory/group_vars/local/vault.yml` : valeurs de remplacement dans le dépôt, à chiffrer avec `ansible-vault` ; mot de passe du coffre dans `~/.factice-vault-pass` |
+| Mot de passe administrateur Nexus | fichier `nexus-admin.yml` hors dépôt (ignoré par Git), ou coffre Ansible |
+| Mots de passe des comptes de service Nexus | générés dans `.secrets/nexus/` (hors dépôt), conservés dans Bitwarden (`factice-nexus`) |
+| Secrets GitHub du dépôt | `NEXUS_BUILD_PASSWORD`, `NEXUS_PROMOTION_PASSWORD`, `NEXUS_DEPLOY_PASSWORD`, et `CMDB_TOKEN` si besoin |
 
-### Stratégie Multi-Environnement
+Variables GitHub du dépôt : `NEXUS_URL`, `NEXUS_DOCKER_CANDIDAT`, `NEXUS_DOCKER_RELEASE`, et `CMDB_EVENT_URL` si besoin.
 
-**Deux environnements configurés :**
-
-| Environnement | Port | Déploiement | URL |
-|---|---|---|---|
-| **Integration** | :8080 | Automatique (push main) | http://localhost:8080 |
-| **Production** | :9080 | Manuel (workflow_dispatch) | http://localhost:9080 |
-
-Chaque environnement a:
-- Base de données PostgreSQL distincte (ports 5432 vs 5433)
-- Utilisateur DB distinct (factice_integration vs factice_production)
-- Répertoire d'installation distinct
-- Credentiales vault distincts
-
-### Validation End-to-End
-
-#### Prérequis
-
-1. **Secrets vault** — Ajouter à `NAS-LOGO/inventory/group_vars/all/vault.yml`:
-```yaml
-vault_nexus_admin_password: "..."
-vault_nexus_url: "localhost:8082"
-vault_factice_db_password: "..."
-vault_factice_prod_db_password: "..."
-vault_github_runner_token: "..."
-```
-
-2. **Runner GitHub Actions** — Token depuis Settings → Developer settings → Personal access tokens
-
-#### Procédure de test
+### Configurer Nexus
 
 ```bash
-# 1. Déployer environment INTEGRATION
-cd /Volumes/logousb/SSD/Projects/NAS-LOGO
-ansible-playbook -i inventory/hosts deploy-factice-integration.yml \
-  --vault-password-file ~/.nas-logo-vault-pass
-
-# 2. Vérifier health (integration)
-curl http://localhost:8080/health
-# → Doit retourner 200 OK, traversant reverse proxy → app → DB
-
-# 3. Test idempotence (deuxième run, ne doit rien changer)
-ansible-playbook -i inventory/hosts deploy-factice-integration.yml
-# Changements attendus: changed=0
-
-# 4. Déployer PRODUCTION (manuel, demande confirmation)
-ansible-playbook -i inventory/hosts deploy-factice-production.yml \
-  --vault-password-file ~/.nas-logo-vault-pass
-# Tape "yes" quand demandé
-
-# 5. Vérifier health (production)
-curl http://localhost:9080/health
-# → Doit retourner 200 OK
-
-# 6. Test CI/CD (push code → auto-deploy integration)
-cd /Volumes/logousb/SSD/Projects/factice
-git add .
-git commit -m "test: trigger CI/CD"
-git push origin main
-# Vérifier: GitHub Actions → ci.yml workflow
-# Vérifier: Image dans Nexus à localhost:8082/factice:latest
-# Vérifier: http://localhost:8080/health reste 200 (re-deployé)
-
-# 7. Test endpoint applicatif
-curl http://localhost:8080/items
-# → Doit retourner JSON array (liste des items PostgreSQL)
-
-# 8. Créer un item (POST)
-curl -X POST http://localhost:8080/items \
-  -H "Content-Type: application/json" \
-  -d '{"name":"test-item"}'
-# → Doit retourner 201 + item créé
-
-# 9. Vérifier item créé
-curl http://localhost:8080/items
-# → Doit inclure "test-item"
-
-# 10. Reboot test (optionnel, valide auto-restart)
-# Redémarrer Mac Mini
-# Vérifier: curl http://localhost:8080/health → 200 après boot
+ansible-playbook provision-nexus.yml \
+  -e nexus_manage_container=false -e nexus_container_name=nexus \
+  -e nexus_eula_accepted=true -e @nexus-admin.yml
 ```
 
-### Critères d'Acceptation
+`nexus_eula_accepted=true` est une décision de l'exploitant : la licence de la Community Edition n'est jamais acceptée par défaut. Le conteneur doit publier les ports Docker 5001 à 5004 (candidat, release, proxy, groupe). Détails dans [nexus/README.md](nexus/README.md).
+
+### Déployer
+
+```bash
+ansible-playbook deploy-factice-integration.yml --vault-password-file ~/.factice-vault-pass
+curl http://localhost:8080/health
+
+ansible-playbook deploy-factice-production.yml --vault-password-file ~/.factice-vault-pass
+curl http://localhost:9080/health
+```
+
+Pour déployer une release précise, ajouter `-e factice_release_image=<hôte>/factice.app/factice@<empreinte>`.
+
+### Recette Nexus
+
+```bash
+docker build -t factice-recette:local app
+IMAGE=factice-recette:local scripts/nexus/recette.sh
+```
+
+La recette joue le cycle complet (publication, promotion) puis contrôle R1, R2, R3, R4, R8, R11 et le cloisonnement des comptes. Elle laisse des artefacts de test dans l'instance.
+
+## Critères d'acceptation
 
 | # | Critère | Validation |
 |---|---|---|
-| AC1 | Nexus déployé, repos créés | `curl http://localhost:8081/service/rest/v1/status` |
-| AC2 | Runner enregistré | GitHub → Settings → Actions → Runners |
-| AC3 | App integration up | `curl http://localhost:8080/health` → 200 |
-| AC4 | App production up | `curl http://localhost:9080/health` → 200 |
-| AC5 | CI/CD fonctionne | Push → GitHub Actions déclenché → image dans Nexus |
-| AC6 | API /items fonctionne | GET/POST → JSON responses |
-| AC7 | Idempotence | 2e run = `changed=0` |
-| AC8 | Redémarrage robuste | Après restart Mac, tiers remontent auto |
-| AC9 | Isolation environnement | Integration DB ≠ Production DB |
-| AC10 | Chaîne complète 3-tiers | Reverse proxy (8080) → App container (3001) → PostgreSQL (5432) |
+| AC1 | Nexus conforme, dépôts créés | `provision-nexus.yml` : `changed=0` au second passage, « Instance conforme » |
+| AC2 | Recette Nexus | `scripts/nexus/recette.sh` : tous les contrôles PASS |
+| AC3 | Runner enregistré | GitHub, Settings, Actions, Runners |
+| AC4 | Intégration disponible | `curl http://localhost:8080/health` renvoie 200 |
+| AC5 | Production disponible | `curl http://localhost:9080/health` renvoie 200 |
+| AC6 | CI/CD fonctionnelle | Push sur `main` : build, candidat, promotion, release, déploiement |
+| AC7 | API `/items` | GET et POST renvoient du JSON |
+| AC8 | Idempotence | Second passage d'un playbook : `changed=0` |
+| AC9 | Redémarrage robuste | Après redémarrage du Mac, les tiers remontent seuls |
+| AC10 | Isolation des environnements | Bases et utilisateurs distincts entre intégration et production |
+| AC11 | Chaîne complète | Reverse proxy, conteneur applicatif, PostgreSQL |
 
-## Repository GitHub
+## Limites connues
 
-**Factice repo:** https://github.com/logo-solutions/factice
+- Le déploiement complet des deux environnements (connexion du conteneur à PostgreSQL, démarrage du LaunchAgent Caddy, tirage d'une release) n'a pas encore été joué de bout en bout : seuls la syntaxe des playbooks et la validité du Caddyfile sont contrôlées.
+- Aucun runner GitHub n'est encore enregistré : la CI ne s'exécute pas tant que `roles/github_runner` n'a pas été appliqué.
+- Le fichier `inventory/group_vars/local/vault.yml` contient des valeurs de remplacement en clair, à chiffrer avec `ansible-vault`.
+- Écarts de la mise en œuvre Nexus avec la spécification (promotion par republication, pas d'analyse de vulnérabilités, un port par dépôt Docker, etc.) : voir [nexus/README.md](nexus/README.md).
 
-- Source de la CI/CD (push → GitHub Actions)
-- Runner self-hosted exécute les workflows
-- Images publiées dans Nexus à localhost:8082/factice:*
+## Dépôt GitHub
 
-## Architecture : les 3 tiers
-
-Voir [architecture.md](architecture.md) pour un diagramme détaillé.
-
-## Contrat d'appel de `deploy_stack`
-
-Voir [contrat-deploy-stack.md](contrat-deploy-stack.md).
-
-## Flux CI/CD
-
-Voir [flux-cicd.md](flux-cicd.md).
-
-## Flux de déploiement Ansible
-
-Voir [flux-deploiement.md](flux-deploiement.md).
-
-## Decisions d'architecture
-
-Voir [decisions.md](decisions.md) : pourquoi Node.js, reverse proxy natif, PostgreSQL natif, Nexus provisionné par Ansible, runner self-hosted, etc.
-
-## Mémoire projet
-
-Mémorisé dans `/Users/logo/.claude/projects/memory/` :
-- `factice_executive_summary.md` — Vue d'ensemble ship-ready
-- `factice_project_structure.md` — Structure et objectifs
-- `factice_decisions.md` — Justification des choix
-- `factice_implementation_progress.md` — Progression (6 components)
-- `factice_multienv_strategy.md` — Stratégie integration + production
-- `feedback_factice_multienv_constraint.md` — Contraintes (2 envs, ports, "factice" in URLs)
-
----
-
-## Status
-
-✅ **SHIP-READY** — Tous les composants implémentés et documentés
-
-Prêt pour:
-1. Valider end-to-end (vault secrets + playbooks)
-2. Tester CI/CD (push → GitHub Actions → Nexus)
-3. Valider acceptation criteria (AC1-AC10)
-
-Commits:
-- Docs: `faed7a4`
-- App code: `c95377a`
-- CI/CD multi-env: `0c67904`
-- NAS-LOGO roles: `5c5c1fb`, `3d18598`, `45b73e0`, `cfc335d`
+https://github.com/logo-solutions/factice
