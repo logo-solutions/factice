@@ -1,0 +1,29 @@
+---
+- name: Créer les répertoires de Nexus
+  file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ nexus_install_dir }}"
+    - "{{ nexus_data_dir }}"
+
+- name: Générer le docker-compose de Nexus
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ nexus_install_dir }}/docker-compose.yml"
+    mode: "0644"
+  register: nexus_compose
+
+- name: Créer le réseau Docker
+  community.docker.docker_network:
+    name: "{{ nexus_docker_network }}"
+    docker_host: "{{ docker_host | default(omit) }}"
+
+- name: Démarrer Nexus
+  community.docker.docker_compose_v2:
+    project_src: "{{ nexus_install_dir }}"
+    state: present
+    pull: missing
+    recreate: "{{ 'always' if nexus_compose.changed else 'auto' }}"
+    docker_host: "{{ docker_host | default(omit) }}"

@@ -1,0 +1,10 @@
+---
+# Variables attendues : fmt, repo_name, repo_kind (hosted|proxy|group),
+# repo_blob, et selon le cas repo_lifecycle, repo_remote_url, repo_members.
+- name: "Dépôt {{ repo_name }}"
+  uri:
+    url: "{{ nexus_api }}/v1/repositories/{{ fmt.api_format }}/{{ repo_kind }}{{ '/' + repo_name if repo_name in nexus_repos_existing.json | map(attribute='name') else '' }}"
+    method: "{{ 'PUT' if repo_name in nexus_repos_existing.json | map(attribute='name') else 'POST' }}"
+    body_format: json
+    body: "{{ lookup('ansible.builtin.template', 'repo-body.json.j2') | from_json }}"
+    status_code: [201, 204]

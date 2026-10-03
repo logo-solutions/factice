@@ -1,0 +1,29 @@
+{%- set storage = {'blobStoreName': repo_blob, 'strictContentTypeValidation': true} -%}
+{%- if repo_kind == 'hosted' -%}
+{%- set storage = storage | combine({'writePolicy': ('ALLOW' if repo_lifecycle == 'candidat' else 'ALLOW_ONCE')}) -%}
+{%- endif -%}
+{%- set body = {'name': repo_name, 'online': true, 'storage': storage} -%}
+
+{%- if repo_kind == 'hosted' and repo_lifecycle == 'candidat' -%}
+{%- set body = body | combine({'cleanup': {'policyNames': ['cleanup-candidat-' ~ fmt.name]}}) -%}
+{%- elif repo_kind == 'proxy' -%}
+{%- set body = body | combine({
+      'cleanup': {'policyNames': ['cleanup-proxy-' ~ fmt.name]},
+      'proxy': {'remoteUrl': repo_remote_url, 'contentMaxAge': 1440, 'metadataMaxAge': 1440},
+      'negativeCache': {'enabled': true, 'timeToLive': 1440},
+      'httpClient': {'blocked': false, 'autoBlock': true}}) -%}
+{%- elif repo_kind == 'group' -%}
+{%- set body = body | combine({'group': {'memberNames': repo_members}}) -%}
+{%- endif -%}
+
+{%- if fmt.name == 'maven' -%}
+{%- set body = body | combine({'maven': {'versionPolicy': 'RELEASE', 'layoutPolicy': ('PERMISSIVE' if repo_kind == 'proxy' else 'STRICT'), 'contentDisposition': 'INLINE'}}) -%}
+{%- elif fmt.name == 'raw' -%}
+{%- set body = body | combine({'raw': {'contentDisposition': 'ATTACHMENT'}}) -%}
+{%- elif fmt.name == 'docker' -%}
+{%- set body = body | combine({'docker': {'v1Enabled': false, 'forceBasicAuth': true, 'httpPort': nexus_docker_connectors[repo_name]}}) -%}
+{%- if repo_kind == 'proxy' -%}
+{%- set body = body | combine({'dockerProxy': {'indexType': 'HUB'}}) -%}
+{%- endif -%}
+{%- endif -%}
+{{ body | to_json }}

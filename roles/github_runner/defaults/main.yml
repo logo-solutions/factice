@@ -1,5 +1,5 @@
 ---
-# GitHub Actions Self-Hosted Runner Configuration for Mac Mini
+# GitHub Actions Self-Hosted Runner Configuration for the macOS host
 
 # Runner installation
 github_runner_version: "2.314.1"

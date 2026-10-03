@@ -4,7 +4,7 @@
   gather_facts: true
   vars:
     ansible_connection: local
-    factice_env: integration
+    factice_environment: integration
 
   roles:
     - factice

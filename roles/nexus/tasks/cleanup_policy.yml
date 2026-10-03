@@ -1,0 +1,9 @@
+---
+- name: "Politique {{ policy_name }}"
+  uri:
+    url: "{{ nexus_api }}/internal/cleanup-policies{{ '/' + policy_name if policy_name in (nexus_cleanup_existing.json | map(attribute='name') | list) else '' }}"
+    method: "{{ 'PUT' if policy_name in (nexus_cleanup_existing.json | map(attribute='name') | list) else 'POST' }}"
+    body_format: json
+    body: >-
+      {{ {'name': policy_name, 'format': policy_format, 'notes': policy_notes} | combine(policy_criteria) }}
+    status_code: 200

@@ -7,13 +7,18 @@ factice_environment: "integration"  # integration | production
 
 # Common settings
 factice_app_name: "factice"
-factice_base_dir: "/opt/factice"
-factice_docker_network: "nas-network"
+factice_base_dir: "{{ lookup('env', 'HOME') }}/factice/{{ factice_environment }}"
+factice_docker_network: "factice-network"
 
 # Tier 1: Application Container (Node.js)
 tier_app_enabled: true
 tier_app_container_name: "factice-app"
 tier_app_docker_image: "node:20-alpine"
+# Image release immuable issue de Nexus (référence par empreinte). Vide :
+# comportement historique (sources montées dans node:20-alpine).
+factice_release_image: ""
+# Compte de lecture seule sur les releases ; secret fourni par l'environnement.
+factice_registry_user: "svc-deploiement"
 tier_app_port_http: "{{ 3001 if factice_environment == 'production' else 3000 }}"
 tier_app_port_internal: 3000
 tier_app_base_dir: "{{ factice_base_dir }}/app"
@@ -30,6 +35,8 @@ tier_db_name: "factice_{{ factice_environment }}"
 tier_db_user: "factice_{{ factice_environment }}"
 tier_db_password: "{{ vault_factice_db_password | default('changeme') }}"
 tier_db_host: "localhost"
+# Adresse de la base vue depuis le conteneur applicatif (hôte Docker).
+tier_db_host_from_app: "host.docker.internal"
 tier_db_port: "{{ 5433 if factice_environment == 'production' else 5432 }}"
 tier_db_port_internal: 5432
 tier_db_container_name: "factice-db"
@@ -43,7 +50,7 @@ tier_db_pool_size: 20
 factice_app_env:
   NODE_ENV: "{{ 'production' if factice_environment == 'production' else 'development' }}"
   PORT: "{{ tier_app_port_internal }}"
-  DATABASE_URL: "postgresql://{{ tier_db_user }}:{{ tier_db_password }}@{{ tier_db_host }}:{{ tier_db_port }}/{{ tier_db_name }}"
+  DATABASE_URL: "postgresql://{{ tier_db_user }}:{{ tier_db_password }}@{{ tier_db_host_from_app }}:{{ tier_db_port }}/{{ tier_db_name }}"
   LOG_LEVEL: "{{ 'info' if factice_environment == 'production' else 'debug' }}"
   API_URL: "http://localhost:{{ tier_app_port_http }}"
 
@@ -51,14 +58,13 @@ factice_app_env:
 tier_web_enabled: true
 tier_web_type: "homebrew"  # homebrew
 tier_web_service_name: "caddy"
-tier_web_config_dir: "/etc/caddy"
+tier_web_config_dir: "{{ factice_base_dir }}/web"
 tier_web_data_dir: "/var/lib/caddy"
-tier_web_launchagent_label: "com.factice.web"
-tier_web_launchagent_plist: "/Library/LaunchAgents/{{ tier_web_launchagent_label }}.plist"
-tier_web_user: "caddy"
+tier_web_launchagent_label: "com.factice.web.{{ factice_environment }}"
+tier_web_launchagent_plist: "{{ lookup('env', 'HOME') }}/Library/LaunchAgents/{{ tier_web_launchagent_label }}.plist"
+tier_web_user: "{{ lookup('env', 'USER') }}"
 tier_web_group: "staff"
-tier_web_port_http: 80
-tier_web_port_https: 443
+tier_web_port_http: "{{ 9080 if factice_environment == 'production' else 8080 }}"
 tier_web_port_app: "{{ tier_app_port_http }}"
 tier_web_hostname: "factice.localhost"
 tier_web_log_format: "json"

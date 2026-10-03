@@ -1,10 +1,18 @@
 name: CI/CD
 
+# Contrat Nexus : Docs/2-pipeline-livraison/registry/nexus-spec.md, section 8.1.
+#   build    -> publication en candidat (compte de build de l'application)
+#   promote  -> contrôles puis republication en release (compte de promotion)
+#   deploy-* -> déploiement d'une release par empreinte (compte en lecture seule)
+# Variables du dépôt : NEXUS_URL, NEXUS_DOCKER_CANDIDAT, NEXUS_DOCKER_RELEASE
+# Secrets : NEXUS_BUILD_PASSWORD, NEXUS_PROMOTION_PASSWORD, NEXUS_DEPLOY_PASSWORD
+# Aucun secret n'est passé en argument de commande.
+
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
-    branches: [main, develop]
+    branches: [main]
   workflow_dispatch:
     inputs:
       deploy_env:
@@ -17,14 +25,23 @@ on:
           - integration
           - production
 
+env:
+  APP_ID: factice.app
+  COMPONENT: factice
+  NEXUS_URL: ${{ vars.NEXUS_URL }}
+  NEXUS_DOCKER_CANDIDAT: ${{ vars.NEXUS_DOCKER_CANDIDAT }}
+  NEXUS_DOCKER_RELEASE: ${{ vars.NEXUS_DOCKER_RELEASE }}
+
 jobs:
-  test-and-build:
+  build:
     runs-on: self-hosted
     outputs:
-      image_tag: ${{ steps.image.outputs.tag }}
-
+      version: ${{ steps.meta.outputs.version }}
+      build: ${{ steps.meta.outputs.build }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
@@ -33,65 +50,112 @@ jobs:
           cache-dependency-path: 'app/package-lock.json'
 
       - name: Install dependencies
-        run: |
-          cd app
-          npm ci
+        run: npm ci
+        working-directory: app
 
       - name: Run tests
+        run: npm test
+        working-directory: app
+
+      - id: meta
         run: |
-          cd app
-          npm test || true
+          echo "version=$(jq -r .version app/package.json)" >> "$GITHUB_OUTPUT"
+          echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
       - name: Build Docker image
-        run: |
-          cd app
-          docker build -t factice:${{ github.sha }} .
-          docker tag factice:${{ github.sha }} factice:latest
+        run: docker build -t "factice:${{ github.sha }}" app
 
-      - name: Push to registry
+      - name: Publish candidate (image + SBOM + manifest)
+        if: github.event_name != 'pull_request'
         env:
-          REGISTRY_URL: ${{ secrets.REGISTRY_URL }}
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          NEXUS_USER: svc-build-factice-app
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_BUILD_PASSWORD }}
+          VERSION: ${{ steps.meta.outputs.version }}
+          BUILD: ${{ steps.meta.outputs.build }}
+          COMMIT: ${{ github.sha }}
+          IMAGE: factice:${{ github.sha }}
+          APP_DIR: app
         run: |
-          docker login $REGISTRY_URL -u $REGISTRY_USERNAME -p $REGISTRY_PASSWORD
-          docker tag factice:${{ github.sha }} $REGISTRY_URL/factice:${{ github.sha }}
-          docker tag factice:latest $REGISTRY_URL/factice:latest
-          docker push $REGISTRY_URL/factice:${{ github.sha }}
-          docker push $REGISTRY_URL/factice:latest
-          docker logout
+          COMMIT_DATE="$(git log -1 --format=%cI)" scripts/nexus/publish-candidate.sh
 
-      - id: image
-        run: echo "tag=${{ github.sha }}" >> $GITHUB_OUTPUT
+  promote:
+    needs: build
+    runs-on: self-hosted
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    outputs:
+      release: ${{ steps.promote.outputs.release }}
+      digest: ${{ steps.promote.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: promote
+        env:
+          NEXUS_USER: svc-promotion
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_PROMOTION_PASSWORD }}
+          VERSION: ${{ needs.build.outputs.version }}
+          BUILD: ${{ needs.build.outputs.build }}
+          REPO_DIR: ${{ github.workspace }}
+          PROTECTED_REFS: origin/main
+        run: scripts/nexus/promote.sh | tee -a "$GITHUB_OUTPUT"
 
   deploy-integration:
-    needs: test-and-build
+    needs: [build, promote]
     runs-on: self-hosted
     if: github.ref == 'refs/heads/main' || github.event.inputs.deploy_env == 'integration'
-
     steps:
-      - name: Deploy to integration
+      - uses: actions/checkout@v4
+
+      - name: Deploy release to integration
+        id: deploy
+        env:
+          NEXUS_DEPLOY_PASSWORD: ${{ secrets.NEXUS_DEPLOY_PASSWORD }}
         run: |
-          cd /Volumes/logousb/SSD/Projects/NAS-LOGO
-          ansible-playbook -i inventory/hosts deploy-factice-integration.yml \
-            --vault-password-file ~/.nas-logo-vault-pass
+          ansible-playbook deploy-factice-integration.yml \
+            --vault-password-file ~/.factice-vault-pass \
+            -e "factice_release_image=${NEXUS_DOCKER_RELEASE}/${APP_ID}/${COMPONENT}@${{ needs.promote.outputs.digest }}"
 
       - name: Verify integration health
-        run: |
-          curl -f http://localhost:8080/health || exit 1
+        run: curl -f http://localhost:8080/health
+
+      - name: Deployment event
+        if: always()
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+          ENVIRONMENT: integration
+          RESULT: ${{ job.status == 'success' && 'reussi' || 'echoue' }}
+          CMDB_EVENT_URL: ${{ vars.CMDB_EVENT_URL }}
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
+        run: scripts/nexus/deployment-event.sh
 
   deploy-production:
-    needs: test-and-build
+    needs: [build, promote]
     runs-on: self-hosted
     if: github.event.inputs.deploy_env == 'production'
-
+    environment: production
     steps:
-      - name: Deploy to production
+      - uses: actions/checkout@v4
+
+      - name: Deploy release to production
+        env:
+          NEXUS_DEPLOY_PASSWORD: ${{ secrets.NEXUS_DEPLOY_PASSWORD }}
         run: |
-          cd /Volumes/logousb/SSD/Projects/NAS-LOGO
-          ansible-playbook -i inventory/hosts deploy-factice-production.yml \
-            --vault-password-file ~/.nas-logo-vault-pass
+          ansible-playbook deploy-factice-production.yml \
+            --vault-password-file ~/.factice-vault-pass \
+            -e "factice_release_image=${NEXUS_DOCKER_RELEASE}/${APP_ID}/${COMPONENT}@${{ needs.promote.outputs.digest }}"
 
       - name: Verify production health
-        run: |
-          curl -f http://localhost:9080/health || exit 1
+        run: curl -f http://localhost:9080/health
+
+      - name: Deployment event
+        if: always()
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+          ENVIRONMENT: production
+          RESULT: ${{ job.status == 'success' && 'reussi' || 'echoue' }}
+          CMDB_EVENT_URL: ${{ vars.CMDB_EVENT_URL }}
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
+        run: scripts/nexus/deployment-event.sh

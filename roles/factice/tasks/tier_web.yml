@@ -14,7 +14,6 @@
         owner: "{{ tier_web_user }}"
         group: "{{ tier_web_group }}"
         mode: "0755"
-      become: true
 
     - name: Template Caddyfile
       template:
@@ -24,7 +23,6 @@
         group: "{{ tier_web_group }}"
         mode: "0644"
         backup: true
-      become: true
       register: caddyfile_update
 
     - name: Verify Caddy configuration syntax
@@ -44,11 +42,10 @@
       template:
         src: "com.factice.web.plist.j2"
         dest: "{{ tier_web_launchagent_plist }}"
-        owner: root
-        group: wheel
+        owner: "{{ tier_web_user }}"
+        group: "{{ tier_web_group }}"
         mode: "0644"
         backup: true
-      become: true
       register: plist_update
 
     - name: Reload Caddy if configuration changed
@@ -56,7 +53,6 @@
         launchctl unload -w {{ tier_web_launchagent_plist }} 2>/dev/null || true
         sleep 2
         launchctl load -w {{ tier_web_launchagent_plist }}
-      become: true
       when: caddyfile_update is changed or plist_update is changed
       register: caddy_reload
       ignore_errors: true
@@ -64,7 +60,6 @@
     - name: Start Caddy if not running
       shell: |
         launchctl load -w {{ tier_web_launchagent_plist }}
-      become: true
       when: caddy_reload is not changed
       register: caddy_start
       ignore_errors: true
@@ -98,7 +93,7 @@
           Web Tier Deployed Successfully
           Server: Caddy ({{ tier_web_type }})
           Hostname: {{ tier_web_hostname }}
-          Ports: {{ tier_web_port_http }}:{{ tier_web_port_https }}
+          Port: {{ tier_web_port_http }}
           Config: {{ tier_web_config_dir }}/Caddyfile
           LaunchAgent: {{ tier_web_launchagent_plist }}
           Reverse Proxy: {{ "http://localhost:{{ tier_web_port_app }}" }}

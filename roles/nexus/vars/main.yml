@@ -1,0 +1,60 @@
+---
+# Noms dérivés de nexus_formats (3.1)
+nexus_hosted_repos: "{{ nexus_formats | map(attribute='name') | product(['candidat', 'release']) | map('join', '-') | list }}"
+nexus_proxy_repos: "{{ nexus_formats | selectattr('proxy') | map(attribute='proxy.name') | list }}"
+nexus_group_repos: "{{ nexus_formats | selectattr('proxy') | map(attribute='name') | map('regex_replace', '$', '-all') | list }}"
+nexus_blobstore_names: "{{ nexus_hosted_repos + nexus_proxy_repos }}"
+
+# Catalogue des dépôts : utilisé pour composer les privilèges natifs de Nexus.
+nexus_repo_catalog: |
+  {% set r = [] -%}
+  {% for f in nexus_formats -%}
+  {% for lc in ['candidat', 'release'] -%}
+  {% set _ = r.append({'name': f.name ~ '-' ~ lc, 'nf': f.nexus_format, 'lc': lc}) -%}
+  {% endfor -%}
+  {% if f.proxy -%}
+  {% set _ = r.append({'name': f.proxy.name, 'nf': f.nexus_format, 'lc': 'proxy'}) -%}
+  {% set _ = r.append({'name': f.name ~ '-all', 'nf': f.nexus_format, 'lc': 'groupe'}) -%}
+  {% endif -%}
+  {% endfor -%}
+  {{ r | to_json }}
+
+# Privilèges natifs de chaque rôle transverse, déduits de ses périmètres.
+nexus_transversal_privileges: |
+  {% set out = {} -%}
+  {% for role in nexus_transversal_roles -%}
+  {% set p = role.get('privileges', []) | list -%}
+  {% for sc in role.get('scopes', []) -%}
+  {% for r in (nexus_repo_catalog if nexus_repo_catalog is not string else nexus_repo_catalog | from_json) if r.lc in sc.lc -%}
+  {% for a in sc.actions -%}
+  {% set _ = p.append('nx-repository-view-' ~ r.nf ~ '-' ~ r.name ~ '-' ~ a) -%}
+  {% endfor %}{% endfor %}{% endfor -%}
+  {% set _ = out.update({role.id: p}) -%}
+  {% endfor -%}
+  {{ out | to_json }}
+
+# Privilèges à sélecteur de contenu, par application et par format (5.1).
+# Un éditeur publie en candidat ; un lecteur consomme la release (et le groupe).
+nexus_app_privileges: |
+  {% set r = [] -%}
+  {% for app in nexus_applications -%}
+  {% for fn in app.formats -%}
+  {% set f = nexus_formats | selectattr('name', 'equalto', fn) | first -%}
+  {% set sel = 'sel-' ~ app.id ~ '-' ~ fn -%}
+  {% set _ = r.append({'name': 'priv-' ~ app.id ~ '-' ~ fn ~ '-candidat-publier', 'app': app.id, 'role': 'editeur', 'repo': fn ~ '-candidat', 'format': f.nexus_format, 'selector': sel, 'actions': ['READ', 'BROWSE', 'ADD', 'EDIT']}) -%}
+  {% set _ = r.append({'name': 'priv-' ~ app.id ~ '-' ~ fn ~ '-release-lire', 'app': app.id, 'role': 'lecteur', 'repo': fn ~ '-release', 'format': f.nexus_format, 'selector': sel, 'actions': ['READ', 'BROWSE']}) -%}
+  {% if f.proxy -%}
+  {% set _ = r.append({'name': 'priv-' ~ app.id ~ '-' ~ fn ~ '-groupe-lire', 'app': app.id, 'role': 'lecteur', 'repo': fn ~ '-all', 'format': f.nexus_format, 'selector': sel, 'actions': ['READ', 'BROWSE']}) -%}
+  {% endif -%}
+  {% endfor -%}
+  {% endfor -%}
+  {{ r | to_json }}
+
+# Comptes de service (5.2) : promotion, déploiement, et un compte de build par
+# application, limité au rôle éditeur de cette application.
+nexus_service_accounts: |
+  {% set a = [{'id': nexus_promotion_account, 'role': 'promotion'}, {'id': nexus_deployment_account, 'role': 'deploiement'}] -%}
+  {% for app in nexus_applications -%}
+  {% set _ = a.append({'id': 'svc-build-' ~ (app.id | replace('.', '-')), 'role': app.id ~ '-editeur'}) -%}
+  {% endfor -%}
+  {{ a | to_json }}

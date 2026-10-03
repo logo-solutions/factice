@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   nexus:
     image: {{ nexus_docker_image }}
@@ -10,12 +8,13 @@ services:
       - {{ nexus_docker_network }}
     ports:
       - "{{ nexus_docker_port_http }}:8081"
-      - "{{ nexus_docker_port_https }}:8082"
-      - "{{ nexus_docker_port_docker_registry }}:5000"
+{% for repo, port in nexus_docker_connectors.items() %}
+      - "{{ port }}:{{ port }}"
+{% endfor %}
     environment:
-      INSTALL4J_ADD_VM_PARAMS: "-Xms512m -Xmx1200m -XX:MaxDirectMemorySize=2g"
+      INSTALL4J_ADD_VM_PARAMS: "{{ nexus_jvm_params }}"
     volumes:
-      - nexus-data:{{ nexus_docker_data_dir }}
+      - {{ nexus_data_dir }}:/nexus-data
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:8081/service/rest/v1/status || exit 1"]
       interval: 30s
@@ -23,15 +22,6 @@ services:
       retries: 5
       start_period: 120s
 
-volumes:
-  nexus-data:
-    driver: local
-    driver_opts:
-      type: none
-      o: bind
-      device: {{ nexus_docker_data_dir }}
-
 networks:
   {{ nexus_docker_network }}:
     external: true
-    driver: bridge

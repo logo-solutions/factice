@@ -1,51 +1,34 @@
 ---
-- name: Create cleanup policies via Nexus API
+# Candidats non promus et caches proxy (3.4). Les releases ne sont jamais
+# nettoyées. L'API de création est l'API interne de l'interface, la seule qui
+# existe pour les politiques de nettoyage.
+- name: Lister les politiques de nettoyage
   uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/cleanup-policies"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "notes": "Automated cleanup policy",
-        "format": "*",
-        "mode": "delete",
-        "criteria": {
-          "isPrerelease": {{ item.criteria.get('is_prerelease', false) | lower }},
-          "lastBlobUpdatedDays": {{ item.criteria.get('last_downloaded_days', 30) }},
-          "lastDownloadedDays": {{ item.criteria.get('last_downloaded_days', 30) }},
-          "releaseType": "{{ item.criteria.get('release_type', 'SNAPSHOT') }}"
-        }
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ cleanup_policies }}"
-  register: cleanup_result
-  ignore_errors: true
+    url: "{{ nexus_api }}/internal/cleanup-policies"
+  register: nexus_cleanup_existing
 
-- name: Log cleanup policy creation results
-  debug:
-    msg: "Cleanup policy {{ item.item.name }}: Status {{ item.status | default('Unknown') }}"
-  loop: "{{ cleanup_result.results }}"
-  when: cleanup_result.results | length > 0
+- name: Politiques sur les candidats
+  include_tasks: cleanup_policy.yml
+  vars:
+    policy_name: "cleanup-candidat-{{ fmt.name }}"
+    policy_format: "{{ fmt.nexus_format }}"
+    policy_notes: "Candidats {{ fmt.name }} non promus"
+    policy_criteria:
+      criteriaLastBlobUpdated: "{{ nexus_cleanup_candidat_days | int }}"
+  loop: "{{ nexus_formats }}"
+  loop_control:
+    loop_var: fmt
+    label: "{{ fmt.name }}"
 
-- name: Verify cleanup policies were created
-  uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/cleanup-policies"
-    method: GET
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    status_code: [200, 401]
-  register: existing_policies
-  until: existing_policies is succeeded
-  retries: 3
-  delay: 2
-
-- name: Display created cleanup policies
-  debug:
-    msg: |
-      Total cleanup policies: {{ existing_policies.json | length if existing_policies.json is defined else 0 }}
-      Policies: {{ (existing_policies.json | map(attribute='name') | list) if existing_policies.json is defined else [] }}
+- name: Politiques sur les caches proxy
+  include_tasks: cleanup_policy.yml
+  vars:
+    policy_name: "cleanup-proxy-{{ fmt.name }}"
+    policy_format: "{{ fmt.nexus_format }}"
+    policy_notes: "Cache proxy {{ fmt.name }} non téléchargé"
+    policy_criteria:
+      criteriaLastDownloaded: "{{ nexus_cleanup_proxy_days | int }}"
+  loop: "{{ nexus_formats | selectattr('proxy') | list }}"
+  loop_control:
+    loop_var: fmt
+    label: "{{ fmt.name }}"

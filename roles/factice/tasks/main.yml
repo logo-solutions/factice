@@ -36,7 +36,7 @@
       Tier 2 - Web Server: {{ "ENABLED" if tier_web_enabled else "DISABLED" }}
         - Type: {{ tier_web_type }}
         - Hostname: {{ tier_web_hostname }}
-        - Ports: {{ tier_web_port_http }}:{{ tier_web_port_https }}
+        - Port: {{ tier_web_port_http }}
 
       Tier 3 - BDD Testing: {{ "ENABLED" if tier_bdd_enabled else "DISABLED" }}
         - Framework: {{ tier_bdd_framework }}

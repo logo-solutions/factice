@@ -1,0 +1,30 @@
+---
+# Tâches planifiées (3.4) : compactage des blob stores, nettoyage Docker.
+# Idempotent par nom : une tâche déjà présente n'est pas recréée.
+- name: Lire les tâches existantes
+  uri:
+    url: "{{ nexus_api }}/v1/tasks"
+  register: nexus_tasks_existing
+
+- name: Compactage de chaque blob store
+  include_tasks: scheduled_task.yml
+  vars:
+    task_name: "Compactage {{ item }}"
+    task_type: blobstore.compact
+    task_properties: { blobstoreName: "{{ item }}", blobsOlderThan: "1" }
+  loop: "{{ nexus_blobstore_names }}"
+
+- name: Purge des téléversements Docker incomplets
+  include_tasks: scheduled_task.yml
+  vars:
+    task_name: "Docker : purge des téléversements incomplets"
+    task_type: repository.docker.upload-purge
+    task_properties: { age: "24" }
+
+- name: Ramasse-miettes Docker des candidats
+  include_tasks: scheduled_task.yml
+  vars:
+    task_name: "Docker : ramasse-miettes docker-candidat"
+    task_type: repository.docker.gc
+    task_properties: { repositoryName: "docker-candidat", deployOffset: "24" }
+  when: "'docker-candidat' in nexus_hosted_repos"

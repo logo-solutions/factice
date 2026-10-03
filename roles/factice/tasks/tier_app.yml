@@ -11,6 +11,14 @@
         - "{{ tier_app_base_dir }}/src"
         - "{{ tier_app_base_dir }}/config"
 
+    - name: Authentification au registre des releases
+      community.docker.docker_login:
+        registry_url: "{{ factice_release_image.split('/')[0] }}"
+        username: "{{ factice_registry_user }}"
+        password: "{{ lookup('ansible.builtin.env', 'NEXUS_DEPLOY_PASSWORD') }}"
+      no_log: true
+      when: factice_release_image | length > 0
+
     - name: Template docker-compose for app tier
       template:
         src: "docker-compose.app.yml.j2"
@@ -29,7 +37,6 @@
       vars:
         stack_name: "{{ tier_app_container_name }}"
         stack_dir: "{{ tier_app_base_dir }}"
-        compose_template: "docker-compose.app.yml.j2"
         pull_images: true
         recreate_containers: "{{ factice_environment == 'production' }}"
         healthcheck_urls: ["{{ tier_app_healthcheck_endpoint }}"]

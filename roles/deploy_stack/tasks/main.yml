@@ -20,41 +20,18 @@
     state: present
   ignore_errors: true  # Network may already exist
 
-- name: Template docker-compose.yml
-  template:
-    src: "docker-compose.yml.j2"
-    dest: "{{ compose_file }}"
-    mode: "0644"
-  when: compose_template is defined
-
-- name: Template .env file
-  template:
-    src: ".env.j2"
-    dest: "{{ compose_env_file }}"
-    mode: "0600"
-  when: stack_environment is defined
-
 - name: Prune unused Docker resources
   shell: docker system prune -f
   when: prune_on_deploy | bool
 
-- name: Pull Docker images
-  docker_compose:
-    project_src: "{{ stack_dir }}"
-    state: present
-    pull: "{{ pull_images | bool }}"
-    recreate: "{{ recreate_containers | bool }}"
-  environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
-  register: docker_compose_result
-
 - name: Start Docker Compose stack
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"
     state: present
-    pull: false
+    pull: "{{ 'always' if pull_images | bool else 'never' }}"
+    recreate: "{{ 'always' if recreate_containers | bool else 'auto' }}"
   environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
+    DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   register: stack_start_result
 
 - name: Wait for services to be healthy
@@ -79,7 +56,7 @@
 
     - name: Run container health checks via Docker
       shell: |
-        docker-compose -f {{ compose_file }} ps | grep -E '(Up|healthy)'
+        docker compose -f {{ compose_file }} ps | grep -E '(Up|healthy)'
       register: compose_health
       retries: "{{ healthcheck_retries }}"
       delay: 2
@@ -92,4 +69,4 @@
       Stack {{ stack_name }} deployed successfully
       Directory: {{ stack_dir }}
       Compose file: {{ compose_file }}
-      Status: {{ stack_start_result.state }}
+      Modifié: {{ stack_start_result.changed }}

@@ -1,28 +1,28 @@
 ---
 - name: Restart stack
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"
     state: restarted
   environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
+    DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   listen: "restart_stack"
 
 - name: Restart specific service
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"
     services:
-      - "{{ service_to_restart | default('') }}"
+      - "{{ service_to_restart }}"
     state: restarted
   environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
+    DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   when: service_to_restart is defined
   listen: "restart_service"
 
 - name: Reload compose configuration
-  docker_compose:
+  community.docker.docker_compose_v2:
     project_src: "{{ stack_dir }}"
     state: present
-    pull: false
+    pull: never
   environment:
-    DOCKER_HOST: "unix:///var/run/docker.sock"
+    DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   listen: "reload_compose"

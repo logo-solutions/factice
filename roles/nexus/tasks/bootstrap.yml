@@ -1,0 +1,68 @@
+---
+- name: Attendre que l'API de Nexus réponde
+  uri:
+    url: "{{ nexus_api }}/v1/status"
+    status_code: 200
+  register: nexus_status
+  retries: "{{ nexus_ready_retries }}"
+  delay: "{{ nexus_ready_delay }}"
+  until: nexus_status.status == 200
+
+- name: Tester le mot de passe administrateur du coffre
+  uri:
+    url: "{{ nexus_api }}/v1/security/anonymous"
+    status_code: [200, 401]
+  register: nexus_admin_check
+  no_log: true
+
+# Premier démarrage : Nexus écrit un mot de passe initial dans son répertoire
+# de données, que l'on remplace par celui du coffre.
+- name: Lire le mot de passe initial
+  command: "docker exec {{ nexus_container_name }} cat /nexus-data/admin.password"
+  environment:
+    DOCKER_HOST: "{{ docker_host | default(omit) }}"
+  register: nexus_initial_password
+  changed_when: false
+  no_log: true
+  when: nexus_admin_check.status == 401
+
+- name: Remplacer le mot de passe initial par celui du coffre
+  uri:
+    url: "{{ nexus_api }}/v1/security/users/{{ nexus_admin_username }}/change-password"
+    method: PUT
+    url_password: "{{ nexus_initial_password.stdout }}"
+    headers:
+      Content-Type: text/plain
+    body: "{{ nexus_admin_password }}"
+    status_code: 204
+  no_log: true
+  when: nexus_admin_check.status == 401
+
+# EULA de la Community Edition : sans acceptation, Nexus refuse tout contenu.
+# L'acceptation est un acte juridique : jamais implicite, jamais par défaut.
+- name: Lire l'état de l'EULA
+  uri:
+    url: "{{ nexus_api }}/v1/system/eula"
+  register: nexus_eula
+
+- name: Accepter l'EULA (nexus_eula_accepted=true uniquement)
+  uri:
+    url: "{{ nexus_api }}/v1/system/eula"
+    method: POST
+    body_format: json
+    body:
+      accepted: true
+      disclaimer: "{{ nexus_eula.json.disclaimer }}"
+    status_code: [200, 204]
+  when:
+    - not nexus_eula.json.accepted
+    - nexus_eula_accepted | bool
+
+- name: Signaler l'EULA non acceptée
+  debug:
+    msg: >-
+      EULA non acceptée : Nexus refusera tout dépôt ou lecture de contenu.
+      Après lecture de l'accord, relancer avec -e nexus_eula_accepted=true.
+  when:
+    - not nexus_eula.json.accepted
+    - not (nexus_eula_accepted | bool)

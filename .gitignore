@@ -7,3 +7,8 @@ build/
 .DS_Store
 .vscode/
 .idea/
+
+# Secrets générés par le rôle nexus
+.secrets/
+deploy-events.jsonl
+nexus-admin.yml

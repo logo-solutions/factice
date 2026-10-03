@@ -1,167 +1,44 @@
 ---
-- name: Create Maven proxy repositories
+- name: Lister les dépôts existants
   uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/maven/proxy"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "online": true,
-        "storage": {
-          "blobStoreName": "{{ item.blob_store }}",
-          "strictContentTypeValidation": true
-        },
-        "proxy": {
-          "remoteUrl": "{{ item.remote_url }}",
-          "contentMaxAge": 1440,
-          "metadataMaxAge": 1440
-        },
-        "negativeCache": {
-          "enabled": true,
-          "timeToLive": 1440
-        },
-        "httpClient": {
-          "blocked": false,
-          "autoBlock": true,
-          "connection": {
-            "retries": 0,
-            "userAgentSuffix": "Nexus",
-            "timeout": 60,
-            "enableCircularRedirects": false,
-            "enableCookieSupport": false
-          }
-        },
-        "cleanup": null
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ repositories.maven | selectattr('type', 'equalto', 'proxy') }}"
-  register: maven_proxy_result
-  ignore_errors: true
+    url: "{{ nexus_api }}/v1/repositories"
+  register: nexus_repos_existing
 
-- name: Create Maven hosted repositories
-  uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/maven/hosted"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "online": true,
-        "storage": {
-          "blobStoreName": "{{ item.blob_store }}",
-          "strictContentTypeValidation": true,
-          "writePolicy": "ALLOW_WRITE_ONCE"
-        },
-        "component": {
-          "proprietaryComponents": false
-        }
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ repositories.maven | selectattr('type', 'equalto', 'hosted') }}"
-  register: maven_hosted_result
-  ignore_errors: true
+- name: Dépôts hébergés (candidat et release)
+  include_tasks: repository.yml
+  vars:
+    repo_kind: hosted
+    repo_lifecycle: "{{ pair.1 }}"
+    repo_name: "{{ pair.0.name }}-{{ pair.1 }}"
+    repo_blob: "{{ pair.0.name }}-{{ pair.1 }}"
+    fmt: "{{ pair.0 }}"
+  loop: "{{ nexus_formats | product(['candidat', 'release']) | list }}"
+  loop_control:
+    loop_var: pair
+    label: "{{ pair.0.name }}-{{ pair.1 }}"
 
-- name: Create Docker proxy repositories
-  uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/docker/proxy"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "online": true,
-        "storage": {
-          "blobStoreName": "{{ item.blob_store }}",
-          "strictContentTypeValidation": false
-        },
-        "docker": {
-          "forceBasicAuth": false,
-          "httpsPort": null,
-          "httpPort": 5000,
-          "v1Enabled": false
-        },
-        "proxy": {
-          "remoteUrl": "{{ item.remote_url }}",
-          "contentMaxAge": 1440,
-          "metadataMaxAge": 1440
-        }
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ repositories.docker | selectattr('type', 'equalto', 'proxy') }}"
-  register: docker_proxy_result
-  ignore_errors: true
+- name: Dépôts proxy
+  include_tasks: repository.yml
+  vars:
+    repo_kind: proxy
+    repo_name: "{{ fmt.proxy.name }}"
+    repo_blob: "{{ fmt.proxy.name }}"
+    repo_remote_url: "{{ fmt.proxy.remote_url }}"
+  loop: "{{ nexus_formats | selectattr('proxy') | list }}"
+  loop_control:
+    loop_var: fmt
+    label: "{{ fmt.proxy.name }}"
 
-- name: Create Docker hosted repositories
-  uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/docker/hosted"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "online": true,
-        "storage": {
-          "blobStoreName": "{{ item.blob_store }}",
-          "strictContentTypeValidation": false,
-          "writePolicy": "ALLOW_WRITE_ONCE"
-        },
-        "docker": {
-          "forceBasicAuth": false,
-          "httpsPort": null,
-          "httpPort": 5000,
-          "v1Enabled": false
-        }
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ repositories.docker | selectattr('type', 'equalto', 'hosted') }}"
-  register: docker_hosted_result
-  ignore_errors: true
-
-- name: Create NPM proxy repositories
-  uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories/npm/proxy"
-    method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
-    body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "online": true,
-        "storage": {
-          "blobStoreName": "{{ item.blob_store }}",
-          "strictContentTypeValidation": true
-        },
-        "proxy": {
-          "remoteUrl": "{{ item.remote_url }}",
-          "contentMaxAge": 1440,
-          "metadataMaxAge": 1440
-        }
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ repositories.npm | selectattr('type', 'equalto', 'proxy') }}"
-  register: npm_proxy_result
-  ignore_errors: true
-
-- name: Log repository creation results
-  debug:
-    msg: |
-      Maven proxy: {{ maven_proxy_result.results | length }} configurations
-      Maven hosted: {{ maven_hosted_result.results | length }} configurations
-      Docker proxy: {{ docker_proxy_result.results | length }} configurations
-      Docker hosted: {{ docker_hosted_result.results | length }} configurations
-      NPM proxy: {{ npm_proxy_result.results | length }} configurations
+# Les groupes exposent release + proxy en lecture. Le candidat n'y figure
+# jamais : aucun déploiement ne le consomme (3.1).
+- name: Groupes de lecture
+  include_tasks: repository.yml
+  vars:
+    repo_kind: group
+    repo_name: "{{ fmt.name }}-all"
+    repo_blob: "{{ fmt.name }}-release"
+    repo_members: ["{{ fmt.name }}-release", "{{ fmt.proxy.name }}"]
+  loop: "{{ nexus_formats | selectattr('proxy') | list }}"
+  loop_control:
+    loop_var: fmt
+    label: "{{ fmt.name }}-all"

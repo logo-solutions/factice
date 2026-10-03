@@ -45,23 +45,6 @@
 
       when: tier_db_type == "homebrew"
 
-    - name: Deploy PostgreSQL via Docker
-      block:
-        - name: Create PostgreSQL Docker Compose file
-          template:
-            src: "docker-compose.db.yml.j2"
-            dest: "{{ tier_db_data_dir }}/docker-compose.yml"
-            mode: "0644"
-          when: false  # Template not included, placeholder for docker support
-
-        - name: Deploy PostgreSQL container
-          docker_compose:
-            project_src: "{{ tier_db_data_dir }}"
-            state: present
-          when: false  # Docker deployment placeholder
-
-      when: tier_db_type == "docker"
-
     - name: Wait for database connection
       postgresql_query:
         db: "{{ tier_db_name }}"

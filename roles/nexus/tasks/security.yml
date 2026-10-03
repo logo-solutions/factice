@@ -1,0 +1,139 @@
+---
+# Authentification, sélecteurs de contenu, privilèges, rôles et comptes (5).
+- name: Désactiver l'accès anonyme
+  uri:
+    url: "{{ nexus_api }}/v1/security/anonymous"
+    method: PUT
+    body_format: json
+    body:
+      enabled: false
+      userId: anonymous
+      realmName: NexusAuthenticatingRealm
+    status_code: 200
+
+- name: Activer les realms d'authentification
+  uri:
+    url: "{{ nexus_api }}/v1/security/realms/active"
+    method: PUT
+    body_format: json
+    body: "{{ nexus_realms }}"
+    status_code: 204
+
+- name: Lire l'existant (sélecteurs, privilèges, rôles, comptes)
+  uri:
+    url: "{{ nexus_api }}/v1/security/{{ item }}"
+  loop: [content-selectors, privileges, roles, users]
+  register: nexus_security_existing
+
+- name: Mémoriser les noms existants
+  set_fact:
+    nexus_known_selectors: "{{ nexus_security_existing.results[0].json | map(attribute='name') | list }}"
+    nexus_known_privileges: "{{ nexus_security_existing.results[1].json | map(attribute='name') | list }}"
+    nexus_known_roles: "{{ nexus_security_existing.results[2].json | map(attribute='id') | list }}"
+    nexus_known_users: "{{ nexus_security_existing.results[3].json | map(attribute='userId') | list }}"
+    nexus_app_privs: "{{ nexus_app_privileges if nexus_app_privileges is not string else nexus_app_privileges | from_json }}"
+    nexus_trans_privs: "{{ nexus_transversal_privileges if nexus_transversal_privileges is not string else nexus_transversal_privileges | from_json }}"
+
+# --- Sélecteurs : un par application et par format (4.2) --------------------
+- name: Sélecteurs de contenu
+  vars:
+    sel_name: "sel-{{ item.0.id }}-{{ item.1 }}"
+    sel_exists: "{{ sel_name in nexus_known_selectors }}"
+  uri:
+    url: "{{ nexus_api }}/v1/security/content-selectors{{ '/' ~ sel_name if sel_exists else '' }}"
+    method: "{{ 'PUT' if sel_exists else 'POST' }}"
+    body_format: json
+    body: >-
+      {{ ({} if sel_exists else {'name': sel_name}) | combine({
+           'description': 'Chemin de ' ~ item.0.id ~ ' (' ~ item.1 ~ ')',
+           'expression': nexus_selector_expressions[item.1]
+                         | replace('__ID__', item.0.id)
+                         | replace('__PATH__', item.0.id | replace('.', '/'))
+                         | replace('__SCOPE__', item.0.id | replace('.', '-'))}) }}
+    status_code: [200, 201, 204]
+  loop: "{{ nexus_applications | subelements('formats') }}"
+  loop_control:
+    label: "{{ item.0.id }} / {{ item.1 }}"
+
+# --- Privilèges ---------------------------------------------------------------
+- name: Privilèges à sélecteur de contenu
+  vars:
+    exists: "{{ item.name in nexus_known_privileges }}"
+  uri:
+    url: "{{ nexus_api }}/v1/security/privileges/repository-content-selector{{ '/' ~ item.name if exists else '' }}"
+    method: "{{ 'PUT' if exists else 'POST' }}"
+    body_format: json
+    body:
+      name: "{{ item.name }}"
+      description: "{{ item.role }} de {{ item.app }} sur {{ item.repo }}"
+      actions: "{{ item.actions }}"
+      format: "{{ item.format }}"
+      repository: "{{ item.repo }}"
+      contentSelector: "{{ item.selector }}"
+    status_code: [200, 201, 204]
+  loop: "{{ nexus_app_privs }}"
+  loop_control:
+    label: "{{ item.name }}"
+
+# --- Rôles par application : <id>-editeur et <id>-lecteur (5.1) ---------------
+- name: Rôles par application
+  vars:
+    role_id: "{{ item.0.id }}-{{ item.1 }}"
+    exists: "{{ role_id in nexus_known_roles }}"
+  uri:
+    url: "{{ nexus_api }}/v1/security/roles{{ '/' ~ role_id if exists else '' }}"
+    method: "{{ 'PUT' if exists else 'POST' }}"
+    body_format: json
+    body:
+      id: "{{ role_id }}"
+      name: "{{ role_id }}"
+      description: "{{ 'Publication en candidat' if item.1 == 'editeur' else 'Lecture des releases' }} : {{ item.0.id }}"
+      privileges: "{{ nexus_app_privs | selectattr('app', 'equalto', item.0.id) | selectattr('role', 'equalto', item.1) | map(attribute='name') | list }}"
+      roles: []
+    status_code: [200, 201, 204]
+  loop: "{{ nexus_applications | product(['editeur', 'lecteur']) | list }}"
+  loop_control:
+    label: "{{ item.0.id }}-{{ item.1 }}"
+
+# --- Rôles transverses (5.1) --------------------------------------------------
+- name: Rôles transverses
+  vars:
+    exists: "{{ item.id in nexus_known_roles }}"
+  uri:
+    url: "{{ nexus_api }}/v1/security/roles{{ '/' ~ item.id if exists else '' }}"
+    method: "{{ 'PUT' if exists else 'POST' }}"
+    body_format: json
+    body:
+      id: "{{ item.id }}"
+      name: "{{ item.name }}"
+      description: "{{ item.description }}"
+      privileges: "{{ nexus_trans_privs[item.id] }}"
+      roles: []
+    status_code: [200, 201, 204]
+  loop: "{{ nexus_transversal_roles }}"
+  loop_control:
+    label: "{{ item.id }}"
+
+# --- Comptes de service (5.2) : mot de passe généré, conservé hors dépôt -----
+- name: Comptes de service
+  vars:
+    exists: "{{ item.id in nexus_known_users }}"
+    base:
+      userId: "{{ item.id }}"
+      firstName: "{{ item.id }}"
+      lastName: service
+      emailAddress: "{{ nexus_service_email }}"
+      status: active
+      source: default
+      roles: ["{{ item.role }}"]
+  uri:
+    url: "{{ nexus_api }}/v1/security/users{{ '/' ~ item.id if exists else '' }}"
+    method: "{{ 'PUT' if exists else 'POST' }}"
+    body_format: json
+    body: >-
+      {{ base if exists else base | combine({'password': lookup('ansible.builtin.password', nexus_secrets_dir ~ '/' ~ item.id ~ ' length=32 chars=ascii_letters,digits')}) }}
+    status_code: [200, 204]
+  no_log: true
+  loop: "{{ nexus_service_accounts if nexus_service_accounts is not string else nexus_service_accounts | from_json }}"
+  loop_control:
+    label: "{{ item.id }}"

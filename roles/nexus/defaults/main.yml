@@ -1,148 +1,135 @@
 ---
-# Nexus Repository Manager v3 deployment specification v5
+# Nexus Repository : mise en œuvre de Docs/2-pipeline-livraison/registry/nexus-spec.md
+# Les références (3.2, 4.2, 5.1…) renvoient aux sections de cette spécification.
 
-# Docker deployment
+# --- Conteneur --------------------------------------------------------------
+# nexus_manage_container=false : seule la configuration est appliquée à une
+# instance existante (cas d'un Nexus déjà en service).
+nexus_manage_container: true
 nexus_container_name: "nexus3"
 nexus_docker_image: "sonatype/nexus3:latest"
+nexus_docker_network: "factice-network"
 nexus_docker_port_http: 8081
-nexus_docker_port_https: 8082
-nexus_docker_port_docker_registry: 5000
-nexus_docker_data_dir: "/opt/nexus/data"
-nexus_docker_network: "nas-network"
+nexus_install_dir: "{{ ansible_env.HOME }}/nexus"
+nexus_data_dir: "/opt/nexus/data"
+nexus_jvm_params: "-Xms512m -Xmx1200m -XX:MaxDirectMemorySize=1g"
 
-# Stack settings
-stack_name: "nexus"
-stack_dir: "/opt/nexus"
-docker_network: "{{ nexus_docker_network }}"
+# --- API --------------------------------------------------------------------
+nexus_api_host: "localhost"
+nexus_api: "http://{{ nexus_api_host }}:{{ nexus_docker_port_http }}/service/rest"
+nexus_admin_username: "admin"
+# nexus_admin_password : obligatoire, fourni par le coffre Ansible.
+# Acceptation de l'EULA de la Community Edition : décision de l'exploitant.
+nexus_eula_accepted: false
+nexus_ready_retries: 60
+nexus_ready_delay: 5
 
-# Blob stores configuration
-blob_stores:
-  - name: "default"
-    type: "File"
-    path: "{{ nexus_docker_data_dir }}/blobs/default"
-  - name: "artifacts"
-    type: "File"
-    path: "{{ nexus_docker_data_dir }}/blobs/artifacts"
-  - name: "docker-hub"
-    type: "File"
-    path: "{{ nexus_docker_data_dir }}/blobs/docker"
+# Mots de passe des comptes de service, générés une fois et conservés hors dépôt.
+nexus_secrets_dir: "{{ playbook_dir }}/.secrets/nexus"
 
-# Repository configuration
-repositories:
-  maven:
-    - name: "maven-central"
-      type: "proxy"
-      format: "maven2"
+# --- Dépôts (3.1, 3.2) ------------------------------------------------------
+# Un dépôt par format et par cycle de vie : <format>-candidat, <format>-release,
+# <format>-proxy-*, groupe de lecture <format>-all (release + proxy).
+# api_format : segment d'URL de l'API ; nexus_format : format Nexus.
+nexus_formats:
+  - name: maven
+    api_format: maven
+    nexus_format: maven2
+    proxy:
+      name: maven-proxy-central
       remote_url: "https://repo1.maven.org/maven2/"
-      blob_store: "artifacts"
-    - name: "maven-releases"
-      type: "hosted"
-      format: "maven2"
-      blob_store: "artifacts"
-    - name: "maven-snapshots"
-      type: "hosted"
-      format: "maven2"
-      blob_store: "artifacts"
-
-  docker:
-    - name: "docker-hub"
-      type: "proxy"
-      format: "docker"
+  - name: npm
+    api_format: npm
+    nexus_format: npm
+    proxy:
+      name: npm-proxy-npmjs
+      remote_url: "https://registry.npmjs.org"
+  - name: docker
+    api_format: docker
+    nexus_format: docker
+    proxy:
+      name: docker-proxy-public
       remote_url: "https://registry-1.docker.io"
-      blob_store: "docker-hub"
-    - name: "docker-hosted"
-      type: "hosted"
-      format: "docker"
-      blob_store: "docker-hub"
+  # Les COTS sont déposés, pas proxifiés : ni proxy ni groupe.
+  - name: raw
+    api_format: raw
+    nexus_format: raw
+    proxy: null
 
-  npm:
-    - name: "npm-central"
-      type: "proxy"
-      format: "npm"
-      remote_url: "https://registry.npmjs.org/"
-      blob_store: "artifacts"
-    - name: "npm-hosted"
-      type: "hosted"
-      format: "npm"
-      blob_store: "artifacts"
+# Docker : un point d'accès (port) par dépôt. En cible, un sous-domaine par
+# dépôt terminé sur le répartiteur de charge (3.3).
+nexus_docker_connectors:
+  docker-candidat: 5001
+  docker-release: 5002
+  docker-proxy-public: 5003
+  docker-all: 5004
 
-# Repository groups
-repository_groups:
-  - name: "maven-group"
-    format: "maven2"
-    repositories: ["maven-central", "maven-releases", "maven-snapshots"]
-  - name: "docker-group"
-    format: "docker"
-    repositories: ["docker-hub", "docker-hosted"]
-  - name: "npm-group"
-    format: "npm"
-    repositories: ["npm-central", "npm-hosted"]
+# Quota souple par blob store, en Go (null : aucun).
+nexus_blob_quota_gb: 20
 
-# Cleanup policies
-cleanup_policies:
-  - name: "cleanup-old-snapshots"
-    criteria:
-      release_type: "SNAPSHOT"
-      last_downloaded_days: 30
-  - name: "cleanup-old-artifacts"
-    criteria:
-      last_downloaded_days: 90
+# --- Nettoyage (3.4) --------------------------------------------------------
+# Durées à fixer avec l'exploitation. Jamais appliqué aux releases.
+nexus_cleanup_candidat_days: 30
+nexus_cleanup_proxy_days: 60
+nexus_compaction_cron: "0 0 3 ? * SUN"
 
-# Security configuration
-security:
-  admin_password: "{{ nexus_admin_password | default('admin123') }}"
-  enable_anonymous_access: false
-  enable_realms:
-    - "NexusAuthenticatingRealm"
-    - "LdapRealm"
-    - "LocalAuthorityRealm"
+# --- Sécurité (5) -----------------------------------------------------------
+nexus_realms:
+  - NexusAuthenticatingRealm
+  - DockerToken
 
-  ldap_config:
-    enabled: false
-    name: "ldap"
-    connection_url: "ldap://ldap.example.com:389"
-    base_dn: "dc=example,dc=com"
-    bind_dn: "cn=admin,dc=example,dc=com"
-    bind_password: "{{ ldap_password | default('') }}"
-    user_object_class: "inetOrgPerson"
-    user_id_attribute: "uid"
+# Identifiant d'application = service.projet (4.1). `mutualise` porte les
+# images dorées (7). Un sélecteur de contenu par application et par format.
+nexus_applications:
+  - id: mutualise
+    domaine: plateforme
+    equipe: plateforme
+    proprietaire: logo
+    formats: [raw, docker]
+  - id: factice.app
+    domaine: demonstration
+    equipe: plateforme
+    proprietaire: logo
+    formats: [docker, raw]
 
-# CI/CD integration contract
-cicd_contract:
-  health_check_endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
-  readiness_timeout: 120
-  health_check_interval: 10
-  metrics_endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/metrics"
-  supports_prometheus: true
+# Préfixe de chemin par format (4.2). __ID__ : identifiant ; __PATH__ :
+# identifiant avec « / » ; __SCOPE__ : identifiant avec « - ».
+nexus_selector_expressions:
+  raw: 'path =^ "/__ID__/"'
+  docker: 'path =^ "/v2/__ID__/"'
+  maven: 'path =^ "/__PATH__/"'
+  npm: 'path =^ "/@__SCOPE__/"'
 
-  api_endpoints:
-    repositories: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories"
-    status: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
-    components: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/components"
+# Comptes de service (5.2). Mot de passe généré dans nexus_secrets_dir.
+nexus_promotion_account: "svc-promotion"
+nexus_deployment_account: "svc-deploiement"
+nexus_service_email: "svc@factice.local"
 
-# CMDB integration
-cmdb_integration:
-  enabled: true
-  inventory_source: "{{ cmdb_url | default('') }}"
-  update_interval: 3600
-  metadata_tags:
-    - "nexus"
-    - "repository-manager"
-    - "artifact-storage"
-
-# Applications list
-applications:
-  nexus: "{{ nexus_docker_image }}"
-  docker: "latest"
-
-# Acceptance test configuration
-acceptance_tests:
-  - name: "health_check"
-    endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
-    expected_status: 200
-  - name: "docker_registry"
-    endpoint: "http://localhost:{{ nexus_docker_port_docker_registry }}/v2/"
-    expected_status: 401
-  - name: "repositories_api"
-    endpoint: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/repositories"
-    expected_status: 200
+# Rôles transverses (5.1). La promotion vers la release n'est donnée qu'au
+# compte de la chaîne de promotion.
+nexus_transversal_roles:
+  - id: promotion
+    name: "Chaîne de promotion"
+    description: "Lit les candidats, écrit dans les releases"
+    scopes:
+      - { lc: [candidat], actions: [read, browse] }
+      - { lc: [release], actions: [read, browse, add, edit] }
+  - id: deploiement
+    name: "Pipeline de déploiement"
+    description: "Lecture seule des releases"
+    scopes:
+      - { lc: [release, groupe], actions: [read, browse] }
+  - id: ssi-controle
+    name: "SSI : contrôle"
+    description: "Lecture transverse de tous les dépôts"
+    scopes:
+      - { lc: [candidat, release, proxy, groupe], actions: [read, browse] }
+  - id: exploitation
+    name: "Exploitation"
+    description: "Administration technique, sans droit de publication"
+    privileges:
+      - nx-blobstores-all
+      - nx-tasks-all
+      - nx-metrics-all
+      - nx-logging-all
+      - nx-search-read

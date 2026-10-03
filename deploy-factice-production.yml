@@ -4,7 +4,7 @@
   gather_facts: true
   vars:
     ansible_connection: local
-    factice_env: production
+    factice_environment: production
 
   pre_tasks:
     - name: Require production confirmation

@@ -1,0 +1,19 @@
+---
+# Variables attendues : task_name, task_type, task_properties.
+- name: "Tâche {{ task_name }}"
+  uri:
+    url: "{{ nexus_api }}/v1/tasks"
+    method: POST
+    body_format: json
+    body:
+      type: "{{ task_type }}"
+      name: "{{ task_name }}"
+      enabled: true
+      alertEmail: "{{ nexus_service_email }}"
+      notificationCondition: FAILURE
+      frequency:
+        schedule: cron
+        cronExpression: "{{ nexus_compaction_cron }}"
+      properties: "{{ task_properties }}"
+    status_code: [201]
+  when: task_name not in (nexus_tasks_existing.json['items'] | map(attribute='name') | list)

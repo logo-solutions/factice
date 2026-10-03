@@ -37,23 +37,11 @@
 		<key>CADDY_LOG_LEVEL</key>
 		<string>{{ 'debug' if factice_environment == 'integration' else 'info' }}</string>
 	</dict>
-	<key>UserName</key>
-	<string>{{ tier_web_user }}</string>
-	<key>GroupName</key>
-	<string>{{ tier_web_group }}</string>
-	<key>RestartDelay</key>
-	<integer>10</integer>
 	<key>ThrottleInterval</key>
 	<integer>1</integer>
 	<key>ProcessType</key>
 	<string>Adaptive</string>
 	<key>Umask</key>
 	<integer>0022</integer>
-	<key>StartInterval</key>
-	<integer>3600</integer>
-	<key>StandardOutPath</key>
-	<string>{{ factice_logs_dir }}/caddy.log</string>
-	<key>StandardErrorPath</key>
-	<string>{{ factice_logs_dir }}/caddy-error.log</string>
 </dict>
 </plist>

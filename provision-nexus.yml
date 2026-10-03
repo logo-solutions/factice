@@ -1,0 +1,12 @@
+---
+# Provisionne ou met à jour Nexus selon Docs/2-pipeline-livraison/registry/nexus-spec.md.
+#   ansible-playbook provision-nexus.yml -e @vault.yml
+# Instance existante, configuration seule :
+#   ansible-playbook provision-nexus.yml -e nexus_manage_container=false \
+#     -e nexus_container_name=nexus -e nexus_admin_password=...
+- name: Nexus Repository, gouvernance des artefacts
+  hosts: localhost
+  connection: local
+  gather_facts: true
+  roles:
+    - nexus

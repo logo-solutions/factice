@@ -1,6 +1,5 @@
 ---
 # Generic Docker orchestrator defaults
-pull_policy: "missing"  # always | missing | never
 healthcheck_retries: 30
 healthcheck_delay: 5
 healthcheck_timeout: 10
@@ -8,7 +7,6 @@ healthcheck_timeout: 10
 # Docker compose project settings
 compose_project_name: "{{ stack_name | default('app') }}"
 compose_file: "{{ stack_dir }}/docker-compose.yml"
-compose_env_file: "{{ stack_dir }}/.env"
 
 # Stack deployment settings
 stack_dir: "/opt/{{ stack_name | default('app') }}"
@@ -18,12 +16,9 @@ recreate_containers: false
 pull_images: true
 prune_on_deploy: false
 
-# Environment variables to template
-stack_environment: {}
-
 # Healthcheck endpoints (optional)
 healthcheck_urls: []
 
 # Docker network
-docker_network: "nas-network"
+docker_network: "factice-network"
 docker_network_driver: "bridge"

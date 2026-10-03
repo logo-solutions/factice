@@ -1,53 +1,39 @@
 ---
-- name: Run acceptance tests
-  block:
-    - name: Run health check acceptance test
-      uri:
-        url: "{{ item.endpoint }}"
-        method: GET
-        user: "admin"
-        password: "{{ security.admin_password }}"
-        force_basic_auth: true
-        status_code: "{{ item.expected_status }}"
-      loop: "{{ acceptance_tests }}"
-      register: acceptance_test_results
-      ignore_errors: true
-      retries: 5
-      delay: 5
-      until: acceptance_test_results is succeeded
+# Contrôles de conformité de l'instance (recette, sections R1 à R4 de la spec).
+# Ils lisent l'état réel de Nexus et échouent bruyamment : aucun ignore_errors.
+- name: Lire l'état réel (dépôts, accès anonyme, rôles)
+  uri:
+    url: "{{ nexus_api }}/v1/{{ item }}"
+  loop: [repositories, security/anonymous, security/roles, security/realms/active]
+  register: nexus_state
 
-    - name: Analyze acceptance test results
-      set_fact:
-        test_summary:
-          total: "{{ acceptance_tests | length }}"
-          passed: "{{ acceptance_test_results.results | selectattr('failed', 'false') | list | length }}"
-          failed: "{{ acceptance_test_results.results | selectattr('failed', 'true') | list | length }}"
+- name: Lire chaque dépôt hébergé
+  uri:
+    url: "{{ nexus_api }}/v1/repositories/{{ item.split('-')[0] }}/hosted/{{ item }}"
+  loop: "{{ nexus_hosted_repos }}"
+  register: nexus_hosted_state
 
-    - name: Display acceptance test summary
-      debug:
-        msg: |
-          Acceptance Test Results:
-          - Total Tests: {{ test_summary.total }}
-          - Passed: {{ test_summary.passed }}
-          - Failed: {{ test_summary.failed }}
+- name: Lire chaque groupe
+  uri:
+    url: "{{ nexus_api }}/v1/repositories/{{ item.split('-')[0] }}/group/{{ item }}"
+  loop: "{{ nexus_group_repos }}"
+  register: nexus_group_state
 
-          Test Details:
-          {% for test in acceptance_test_results.results %}
-          - {{ test.item.name }}: {{ "PASS" if not test.failed else "FAIL" }} ({{ test.status | default('Unknown') }})
-          {% endfor %}
-
-    - name: Fail if critical tests failed
-      assert:
-        that:
-          - test_summary.failed | int == 0
-        fail_msg: "{{ test_summary.failed }} acceptance tests failed"
-      when: acceptance_tests | length > 0
-
-  rescue:
-    - name: Log acceptance test failure
-      debug:
-        msg: |
-          Acceptance tests encountered issues:
-          - This may indicate Nexus is not fully ready
-          - Check logs with: docker logs {{ nexus_container_name }}
-          - Health check endpoint: http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status
+- name: Vérifier la conformité
+  vars:
+    repo_names: "{{ nexus_state.results[0].json | map(attribute='name') | list }}"
+    role_ids: "{{ nexus_state.results[2].json | map(attribute='id') | list }}"
+    releases: "{{ nexus_hosted_state.results | selectattr('item', 'match', '.*-release$') | list }}"
+    candidats: "{{ nexus_hosted_state.results | selectattr('item', 'match', '.*-candidat$') | list }}"
+  assert:
+    that:
+      - nexus_state.results[1].json.enabled == false
+      - nexus_state.results[3].json | sort == nexus_realms | sort
+      - (nexus_hosted_repos + nexus_proxy_repos + nexus_group_repos) | difference(repo_names) | length == 0
+      - releases | map(attribute='json.storage.writePolicy') | unique | list == ['ALLOW_ONCE']
+      - candidats | map(attribute='json.storage.writePolicy') | unique | list == ['ALLOW']
+      - releases | map(attribute='json.cleanup') | map('default', {}, true) | map(attribute='policyNames', default=[]) | flatten | list | length == 0
+      - nexus_group_state.results | map(attribute='json.group.memberNames') | flatten | select('match', '.*-candidat$') | list | length == 0
+      - (nexus_transversal_roles | map(attribute='id') | list + nexus_applications | map(attribute='id') | product(['editeur', 'lecteur']) | map('join', '-') | list) | difference(role_ids) | length == 0
+    success_msg: "Instance conforme : anonyme coupé, releases immuables, candidats exclus des groupes, rôles présents"
+    fail_msg: "Écart de conformité entre Nexus et la spec : relire les valeurs ci-dessus"

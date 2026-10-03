@@ -1,16 +1,18 @@
-version: '3.8'
-
 services:
   app:
-    image: {{ tier_app_docker_image }}
+    image: {{ factice_release_image if factice_release_image | length > 0 else tier_app_docker_image }}
     container_name: {{ tier_app_container_name }}
     hostname: {{ tier_app_container_name }}
     restart: unless-stopped
     networks:
       - {{ factice_docker_network }}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "{{ tier_app_port_http }}:{{ tier_app_port_internal }}"
+{% if factice_release_image | length == 0 %}
     working_dir: {{ tier_app_work_dir }}
+{% endif %}
     user: {{ tier_app_docker_user }}
     env_file:
       - .env
@@ -20,50 +22,24 @@ services:
       DATABASE_URL: {{ factice_app_env.DATABASE_URL }}
       LOG_LEVEL: {{ factice_app_env.LOG_LEVEL }}
       API_URL: {{ factice_app_env.API_URL }}
+{% if factice_release_image | length == 0 %}
     volumes:
       - {{ tier_app_base_dir }}/src:{{ tier_app_work_dir }}/src
       - {{ tier_app_base_dir }}/config:{{ tier_app_work_dir }}/config
       - /app/node_modules
     command: >
       sh -c "npm install && npm start"
+{% endif %}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:{{ tier_app_port_internal }}/health"]
       interval: 30s
       timeout: 10s
       retries: 5
       start_period: 60s
-    depends_on:
-      - db
     labels:
       com.factice.environment: "{{ factice_environment }}"
       com.factice.tier: "app"
 
-  db:
-    image: postgres:16-alpine
-    container_name: factice-db
-    hostname: factice-db
-    restart: unless-stopped
-    networks:
-      - {{ factice_docker_network }}
-    environment:
-      POSTGRES_DB: {{ tier_db_name }}
-      POSTGRES_USER: {{ tier_db_user }}
-      POSTGRES_PASSWORD: {{ tier_db_password }}
-    volumes:
-      - {{ tier_db_data_dir }}:/var/lib/postgresql/data
-    ports:
-      - "{{ tier_db_port }}:{{ tier_db_port_internal }}"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U {{ tier_db_user }} -d {{ tier_db_name }}"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    labels:
-      com.factice.environment: "{{ factice_environment }}"
-      com.factice.tier: "db"
-
 networks:
   {{ factice_docker_network }}:
     external: true
-    driver: bridge

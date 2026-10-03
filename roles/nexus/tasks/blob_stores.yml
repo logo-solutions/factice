@@ -1,43 +1,19 @@
 ---
-- name: Create blob store directories
-  file:
-    path: "{{ item.path }}"
-    state: directory
-    mode: "0755"
-  loop: "{{ blob_stores }}"
-  when: item.type == "File"
-
-- name: Wait for Nexus to be ready for API calls
+# Un blob store par dépôt hébergé ou proxy (3.2), avec quota souple.
+- name: Lister les blob stores existants
   uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/status"
-    method: GET
-    status_code: [200, 401]
-  register: nexus_status
-  retries: 30
-  delay: 2
-  until: nexus_status is succeeded
+    url: "{{ nexus_api }}/v1/blobstores"
+  register: nexus_blobstores_existing
 
-- name: Create blob stores via Nexus API
+- name: Créer les blob stores manquants
   uri:
-    url: "http://localhost:{{ nexus_docker_port_http }}/service/rest/v1/blobstores/file"
+    url: "{{ nexus_api }}/v1/blobstores/file"
     method: POST
-    user: "admin"
-    password: "{{ security.admin_password }}"
-    force_basic_auth: true
     body_format: json
-    body: |
-      {
-        "name": "{{ item.name }}",
-        "path": "{{ item.path }}"
-      }
-    status_code: [201, 400, 401]
-  loop: "{{ blob_stores }}"
-  when: item.type == "File"
-  register: blob_store_result
-  ignore_errors: true
-
-- name: Log blob store creation results
-  debug:
-    msg: "Blob store {{ item.item.name }}: {{ item.status | default('Unknown') }}"
-  loop: "{{ blob_store_result.results }}"
-  when: blob_store_result.results | length > 0
+    body: >-
+      {{ {'name': item, 'path': item}
+         | combine({'softQuota': {'type': 'spaceUsedQuota', 'limit': (nexus_blob_quota_gb | int) * 1024 * 1024 * 1024}}
+                    if nexus_blob_quota_gb else {}) }}
+    status_code: [201, 204]
+  loop: "{{ nexus_blobstore_names }}"
+  when: item not in (nexus_blobstores_existing.json | map(attribute='name') | list)
