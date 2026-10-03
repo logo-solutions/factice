@@ -39,12 +39,13 @@ flowchart LR
     RUN -->|"5. promotion après contrôles"| REG
     RUN -->|"6. preuves de vérification"| REQ
     RUN -->|"7. notes de version"| DOC
-    REG -->|"8. empreinte à déployer"| ANS
-    ANS -->|"9. événement de déploiement"| CMDB
-    REG -->|"10. inventaire des empreintes et SBOM"| CMDB
-    CMDB -->|"11. éléments de configuration"| ITSM
-    DOC -->|"12. procédures d'exploitation"| KB
-    KB -->|"13. articles liés aux incidents"| ITSM
+    RUN -->|"8. lancement du déploiement, empreinte"| ANS
+    REG -->|"9. tirage par empreinte"| ANS
+    ANS -->|"10. événement de déploiement"| CMDB
+    REG -->|"11. inventaire des empreintes et SBOM"| CMDB
+    CMDB -->|"12. éléments de configuration"| ITSM
+    DOC -->|"13. procédures d'exploitation"| KB
+    KB -->|"14. articles liés aux incidents"| ITSM
 ```
 
 | N° | Source | Cible | Quoi | Déclencheur |
@@ -56,12 +57,13 @@ flowchart LR
 | 5 | Runner | Registry | promotion du candidat vers la release, sans reconstruction | contrôles passés (CVE, licences, signature) |
 | 6 | Runner | Référentiel d'exigences | résultats de tests et rapports liés aux exigences | fin de pipeline |
 | 7 | Runner | Documentation produit | notes de version générées | promotion en release |
-| 8 | Registry | Workflows Ansible | empreinte de la release à déployer, tirée en lecture seule | lancement du déploiement |
-| 9 | Workflows Ansible | CMDB | quoi, où, quand : empreinte déployée par environnement | fin de déploiement |
-| 10 | Registry | CMDB | inventaire des empreintes et des SBOM, pour réconciliation | périodique, ou à chaque promotion |
-| 11 | CMDB | ITSM | éléments de configuration rattachés aux changements et aux incidents | consultation ou création de ticket |
-| 12 | Documentation produit | Base de connaissances | procédures d'exploitation tirées de la doc produit | publication d'une version |
-| 13 | Base de connaissances | ITSM | articles de résolution liés aux incidents | traitement d'un incident |
+| 8 | Runner | Workflows Ansible | lancement du playbook avec l'empreinte de la release | job de déploiement : environnement approuvé dans GitLab et, pour un changement normal, changement approuvé dans l'ITSM (flux 2) |
+| 9 | Registry | Workflows Ansible | image tirée par empreinte, en lecture seule | exécution du playbook |
+| 10 | Workflows Ansible | CMDB | quoi, où, quand : empreinte déployée par environnement | fin de déploiement |
+| 11 | Registry | CMDB | inventaire des empreintes et des SBOM, pour réconciliation | périodique, ou à chaque promotion |
+| 12 | CMDB | ITSM | éléments de configuration rattachés aux changements et aux incidents | consultation ou création de ticket |
+| 13 | Documentation produit | Base de connaissances | procédures d'exploitation tirées de la doc produit | publication d'une version |
+| 14 | Base de connaissances | ITSM | articles de résolution liés aux incidents | traitement d'un incident |
 
 ## Vue 2 : cycle de vie d'une livraison
 
@@ -85,6 +87,9 @@ sequenceDiagram
     RUN->>REQ: preuves de vérification
     RUN->>DOC: notes de version
     ITSM->>GL: changement approuvé (production)
+    GL->>GL: approbation de l'environnement protégé
+    GL->>RUN: job de déploiement
+    RUN->>ANS: lancement du playbook avec l'empreinte
     ANS->>REG: tirage par empreinte
     ANS->>CMDB: événement de déploiement
     CMDB->>ITSM: éléments de configuration à jour
@@ -94,7 +99,8 @@ sequenceDiagram
 Points à retenir :
 
 - l'artefact est **construit une seule fois** (étape 3) ; toutes les étapes suivantes manipulent la même empreinte ;
-- la production n'est atteinte qu'avec un changement approuvé dans l'ITSM ;
+- la production n'est atteinte qu'après l'approbation de l'environnement protégé dans GitLab et, pour un changement normal, un changement approuvé dans l'ITSM ;
+- c'est le **job de déploiement du Runner** qui lance Ansible, avec l'empreinte promue ; Ansible ne se déclenche jamais seul ;
 - la CMDB reçoit l'état réel du déploiement, elle ne le décrit pas à la main.
 
 ## Vue 3 : zones
@@ -128,6 +134,7 @@ flowchart TB
     RUN --> REG
     RUN --> REQ
     RUN --> DOC
+    RUN --> ANS
     REG --> ANS
     ANS --> ENV
     ANS --> CMDB
@@ -158,8 +165,8 @@ Point de vigilance : aucun connecteur natif entre l'ITSM et GitLab n'a été ide
 
 ### 2. Alimentation de la CMDB : le pipeline écrit, le registry contrôle
 
-- **Le pipeline écrit** (flux 9) : à chaque déploiement, quoi, où, quand, avec l'empreinte.
-- **Le registry contrôle** (flux 10) : rapprochement périodique pour détecter les écarts ; c'est l'indicateur de rapprochement registry / CMDB.
+- **Le pipeline écrit** (flux 10) : à chaque déploiement, quoi, où, quand, avec l'empreinte.
+- **Le registry contrôle** (flux 11) : rapprochement périodique pour détecter les écarts ; c'est l'indicateur de rapprochement registry / CMDB.
 - Un seul propriétaire par attribut, pour éviter les conflits d'écriture.
 
 ### 3. SBOM : le registry fait foi, un outil d'analyse les exploite
@@ -187,7 +194,7 @@ La documentation est écrite par des développeurs et par des rédacteurs non te
 - **Développeurs** : Markdown dans le dépôt, revue par demande de fusion, publication par le pipeline.
 - **Rédacteurs non techniques** : éditeur visuel synchronisé avec Git (famille GitBook), pour qu'ils n'aient pas à manipuler Git. Le choix de l'outil reste à évaluer.
 - **Notes de version** : générées par le pipeline (flux 7).
-- **Base de connaissances** : outil séparé, orienté exploitation et incidents, alimenté par la publication (flux 12).
+- **Base de connaissances** : outil séparé, orienté exploitation et incidents, alimenté par la publication (flux 13).
 
 ## Questions encore ouvertes
 
