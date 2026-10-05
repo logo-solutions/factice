@@ -1,0 +1,40 @@
+name: Rapprochement registry / CMDB
+
+# Flux 11 : chaque empreinte déclarée dans la CMDB doit exister dans le registry de releases.
+# Un écart ouvre un incident ITSM (flux 12) ; la fiche KB est ensuite à rédiger (flux 14).
+# Secrets : CMDB_TOKEN, NEXUS_DEPLOY_PASSWORD (compte svc-deploiement, lecture seule), ITSM_TOKEN.
+
+on:
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+env:
+  APP_ID: factice.app
+  ITSM_URL: ${{ vars.ITSM_URL || 'http://127.0.0.1:8095' }}
+  CMDB_URL: ${{ vars.CMDB_URL || 'http://127.0.0.1:8096' }}
+  NEXUS_DOCKER_RELEASE: ${{ vars.NEXUS_DOCKER_RELEASE }}
+
+jobs:
+  reconcile:
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rapprochement
+        env:
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
+          NEXUS_USER: svc-deploiement
+          NEXUS_PASSWORD: ${{ secrets.NEXUS_DEPLOY_PASSWORD }}
+        run: scripts/cmdb/reconcile.sh "$APP_ID" | tee -a "$GITHUB_STEP_SUMMARY"
+
+      - name: Ouvrir un incident ITSM (écart de rapprochement)
+        if: failure()
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          ID="$(scripts/itsm/itsm.sh create incident \
+            "Écart de rapprochement registry / CMDB" \
+            "Run ${RUN_URL}" '')" || exit 0
+          echo "::warning::Incident ${ID} ouvert. Documenter la cause dans Docs/kb.md (fiche KB-NNN), puis : itsm.sh kb ${ID} KB-NNN et itsm.sh close ${ID} succes."

@@ -15,6 +15,9 @@ name: CI/CD
 # Incidents et KB (flux 13, 14) : un déploiement en échec ouvre un incident ITSM ; l'incident ne se
 #   clôt en succès qu'avec une fiche KB-NNN (itsm.sh kb). Le job kb-check refuse un commit fix sans
 #   fiche dans Docs/kb.md (ou trailer « KB: non-applicable »).
+# Exigences et preuves (flux 1, 6, 7) : req-check (un feat/fix cite ACC-04, etc.), preuves de tests
+#   par exigence (artefact preuves-exigences), notes de version à la promotion (artefact notes-de-version).
+# L'incident ouvert sur échec porte l'élément de configuration CMDB du service (flux 12).
 # Aucun secret n'est passé en argument de commande.
 
 on:
@@ -66,6 +69,23 @@ jobs:
           if [ -z "$BASE" ]; then BASE="0000000"; fi
           scripts/kb/check-kb.sh "$BASE" "$TETE"
 
+  req-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tout feat/fix cite une exigence (flux 1)
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TETE: ${{ github.sha }}
+        run: |
+          if [ -z "$BASE" ]; then BASE="0000000"; fi
+          scripts/req/check-req.sh "$BASE" "$TETE"
+
   build:
     runs-on: self-hosted
     outputs:
@@ -89,6 +109,14 @@ jobs:
       - name: Run tests
         run: npm test
         working-directory: app
+
+      - name: Preuves de tests par exigence (flux 6)
+        run: node scripts/req/evidence.js
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: preuves-exigences
+          path: preuves/preuves-exigences.md
 
       - id: meta
         run: |
@@ -123,6 +151,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - uses: actions/download-artifact@v4
+        with:
+          name: preuves-exigences
+          path: preuves
+
       - id: promote
         env:
           NEXUS_USER: svc-promotion
@@ -132,6 +165,20 @@ jobs:
           REPO_DIR: ${{ github.workspace }}
           PROTECTED_REFS: origin/main
         run: scripts/nexus/promote.sh | tee -a "$GITHUB_OUTPUT"
+
+      - name: Notes de version (flux 7)
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          DIGEST: ${{ steps.promote.outputs.digest }}
+          BASE: ${{ github.event.before }}
+        run: |
+          mkdir -p notes
+          scripts/release/notes.sh "$VERSION" "$DIGEST" "$BASE" | tee notes/notes-de-version.md >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notes-de-version
+          path: notes/notes-de-version.md
 
   deploy-integration:
     needs: [build, promote]
@@ -199,11 +246,13 @@ jobs:
         if: failure()
         env:
           ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          CI_URL="$(scripts/cmdb/cmdb.sh ci-url "$APP_ID" "$COMPONENT" integration 2>/dev/null || true)"
           ID="$(scripts/itsm/itsm.sh create incident \
             "Échec du déploiement factice en integration" \
-            "Run ${RUN_URL}, commit ${{ github.sha }}" integration)" || exit 0
+            "Run ${RUN_URL}, commit ${{ github.sha }}" integration "$CI_URL")" || exit 0
           echo "::warning::Incident ${ID} ouvert. Documenter la cause dans Docs/kb.md (fiche KB-NNN), puis : itsm.sh kb ${ID} KB-NNN et itsm.sh close ${ID} succes."
 
   change-gate:
@@ -288,9 +337,11 @@ jobs:
         if: failure()
         env:
           ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          CI_URL="$(scripts/cmdb/cmdb.sh ci-url "$APP_ID" "$COMPONENT" production 2>/dev/null || true)"
           ID="$(scripts/itsm/itsm.sh create incident \
             "Échec du déploiement factice en production" \
-            "Run ${RUN_URL}, commit ${{ github.sha }}" production)" || exit 0
+            "Run ${RUN_URL}, commit ${{ github.sha }}" production "$CI_URL")" || exit 0
           echo "::warning::Incident ${ID} ouvert. Documenter la cause dans Docs/kb.md (fiche KB-NNN), puis : itsm.sh kb ${ID} KB-NNN et itsm.sh close ${ID} succes."

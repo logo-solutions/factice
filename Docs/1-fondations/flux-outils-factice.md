@@ -22,19 +22,20 @@
 
 | N° | Flux | État | Réalisation |
 |---|---|---|---|
-| 1 | Exigences → dépôt | Écart | pas de contrôle des identifiants d'exigences dans les commits |
+| 1 | Exigences → dépôt | **Fait** | job `req-check` : un commit `feat`/`fix` cite une exigence de `Docs/exigences/` (`ACC-04`…) ou déclare `Exigence: non-applicable` ; règle valable après le commit de `scripts/req/depuis` |
 | 2 | ITSM → pipeline | **Fait** | job `change-gate` : exige un changement approuvé avant la production |
 | 3 | Dépôt → Runner | **Fait** | jobs sur le runner auto-hébergé |
 | 4 | Runner → Registry (candidat) | **Fait** | `scripts/nexus/publish-candidate.sh` |
 | 5 | Runner → Registry (promotion) | **Fait** | `scripts/nexus/promote.sh`, même empreinte |
-| 6 | Runner → exigences (preuves) | Écart | aucune preuve de test rattachée aux exigences |
-| 7 | Runner → documentation (notes de version) | Écart | non générées |
+| 6 | Runner → exigences (preuves) | **Fait** (périmètre limité) | `scripts/req/evidence.js` : les tests dont le nom cite une exigence produisent `preuves-exigences.md` (artefact du run). Aujourd'hui : ACC-04 et ACC-07 seulement |
+| 7 | Runner → documentation (notes de version) | **Fait** | `scripts/release/notes.sh` à la promotion : changements, exigences citées, fiches KB ajoutées, preuves ; artefact `notes-de-version` et résumé du run |
 | 8 | Runner → Ansible | **Fait** | jobs `deploy-*`, empreinte passée au playbook |
 | 9 | Registry → Ansible | **Fait** | tirage par empreinte, compte en lecture seule |
 | 10 | Déploiement → CMDB | **Fait** | étape « Inventaire CMDB » après un déploiement réussi |
-| 11 | Registry → CMDB (rapprochement) | Partiel | `scripts/cmdb/reconcile.sh` ; à lancer à la main, pas encore planifié |
-| 12 | CMDB → ITSM | Partiel | le changement porte l'URL de l'élément de configuration ; pas de lecture de la CMDB par l'ITSM |
-| 13, 14 | Documentation → KB → ITSM | **Fait** pour les incidents de déploiement | un déploiement en échec ouvre un incident ITSM ; l'incident ne se clôt en succès qu'avec une fiche `KB-NNN` ([kb.md](../kb.md)) ; le job `kb-check` refuse un commit `fix` sans fiche. Reste manuel : rédiger la fiche et rattacher l'incident (`itsm.sh kb`) |
+| 11 | Registry → CMDB (rapprochement) | **Fait** (un sens) | `reconcile.yml`, tous les jours à 05:17 et à la demande ; un écart ouvre un incident. Pas encore le sens inverse (empreintes du registry absentes de la CMDB) |
+| 12 | CMDB → ITSM | **Fait** | le changement (au `link`) et l'incident (à la création, `cmdb.sh ci-url`) portent l'URL de l'élément de configuration |
+| 13 | Documentation → KB | Partiel | les notes de version listent les fiches KB ajoutées ; les procédures d'exploitation ne sont pas tirées d'une documentation produit (il n'y en a pas) |
+| 14 | KB → ITSM | **Fait** pour les incidents de déploiement et de rapprochement | un déploiement en échec ouvre un incident ITSM ; l'incident ne se clôt en succès qu'avec une fiche `KB-NNN` ([kb.md](../kb.md)) ; le job `kb-check` refuse un commit `fix` sans fiche. Reste manuel : rédiger la fiche et rattacher l'incident (`itsm.sh kb`) |
 
 Précision sur le flux 10 : la cible dit « Ansible écrit dans la CMDB ». Ici c'est l'étape qui suit le playbook, dans le même job, qui écrit. Le résultat est le même (un seul propriétaire de l'attribut `empreinte`, écrit à chaque déploiement) et l'écriture est conditionnée à un déploiement réussi, santé vérifiée.
 
@@ -123,7 +124,8 @@ Un incident clos en `echec` (non résolu) n'exige pas de fiche. L'interface web 
 | Écart | Suite |
 |---|---|
 | Jeton CMDB d'administration | créer un jeton NetBox en écriture limitée au modèle (ACC-07) |
-| Rapprochement manuel, un seul sens (CMDB vers registry) | planifier ; ajouter le sens inverse (empreintes déployées absentes de la CMDB) |
+| Rapprochement à sens unique (CMDB vers registry) | ajouter le sens inverse (empreintes déployées absentes de la CMDB) |
 | Le faux ITSM n'a ni interface d'approbation, ni TLS, ni authentification forte | acceptable pour un double de test ; remplacer par un vrai ITSM en gardant `itsm.sh` |
-| Flux 1, 6, 7 | à traiter quand les exigences de factice seront rattachées à des tests |
+| Flux 6 couvre 2 exigences | rattacher des tests aux autres exigences ACC (ACC-01, 02, 03, 08) |
+| Flux 13 | non applicable tant qu'il n'y a pas de documentation produit distincte de `Docs/` |
 | Le changement approuvé n'est pas rattaché à une empreinte précise avant le déploiement | l'ITSM enregistre l'empreinte au `link` ; contrôler qu'elle correspond à la release prévue |

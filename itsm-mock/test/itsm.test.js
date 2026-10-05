@@ -87,7 +87,7 @@ test('changement normal : approbation par un autre, déploiement, clôture', asy
   await s.arreter();
 });
 
-test('séparation des tâches : un même compte ne peut pas approuver sa demande', async () => {
+test('ACC-04 séparation des tâches : un même compte ne peut pas approuver sa demande', async () => {
   const s = await demarrer();
   const c = await s.api('POST', '/changes', 'ts', { type: 'normal', titre: 'Auto-approbation' });
   const r = await s.api('POST', `/changes/${c.body.id}/approve`, 'ts', {});
@@ -107,7 +107,7 @@ test('refus : motif obligatoire, déploiement ensuite impossible', async () => {
   await s.arreter();
 });
 
-test('droits : le jeton du pipeline ne peut pas approuver, l\'approbateur ne peut pas créer', async () => {
+test('ACC-07 droits : le jeton du pipeline ne peut pas approuver, l\'approbateur ne peut pas créer', async () => {
   const s = await demarrer();
   const c = await s.api('POST', '/changes', 'tp', { type: 'normal', titre: 'X' });
   assert.equal((await s.api('POST', `/changes/${c.body.id}/approve`, 'tp', {})).status, 403);
@@ -117,10 +117,11 @@ test('droits : le jeton du pipeline ne peut pas approuver, l\'approbateur ne peu
 
 test('incident : ouvert puis clos, sans déploiement', async () => {
   const s = await demarrer();
-  const c = await s.api('POST', '/changes', 'tp', { type: 'incident', titre: 'Panne /health' });
+  const c = await s.api('POST', '/changes', 'tp', { type: 'incident', titre: 'Panne /health', ci: 'http://cmdb/ipam/services/7/' });
   assert.match(c.body.id, /^INC-/);
   assert.equal(c.body.etat, 'ouvert');
   assert.equal((await s.api('POST', `/changes/${c.body.id}/link`, 'tp', { empreinte: 'sha256:abcdef1234' })).status, 409);
+  assert.equal((await s.api('GET', `/changes/${c.body.id}`, 'tp')).body.ci, 'http://cmdb/ipam/services/7/');
   assert.equal((await s.api('POST', `/changes/${c.body.id}/close`, 'tp', { resultat: 'succes' })).status, 409);
   assert.equal((await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'kb-2' })).status, 400);
   const k = await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'KB-002', url: 'https://example.org/kb' });
@@ -174,7 +175,7 @@ test('persistance : les données survivent à un redémarrage, la numérotation 
   await s2.arreter();
 });
 
-test('configuration des jetons : refus des entrées invalides', () => {
+test('ACC-07 configuration des jetons : refus des entrées invalides', () => {
   assert.throws(() => parseTokens(''), /aucun jeton/);
   assert.throws(() => parseTokens('seul'), /invalide/);
   assert.throws(() => parseTokens('t:u:inconnu'), /droit inconnu/);

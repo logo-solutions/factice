@@ -73,6 +73,7 @@ async function detail(id) {
     ['Type', i.type],
     ['État', el('span', { class: classeEtat(i) }, libelleEtat(i))],
     ['Environnement', i.environnement || '-'],
+    ['Élément CMDB', lienSur(i.ci)],
     ['Description', i.description || '-'],
     ['Demandeur', i.demandeur],
     ['Approbateur', i.approbateur || '-'],

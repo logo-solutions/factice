@@ -199,3 +199,15 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 **Alternative écartée** : une règle de revue seule. Elle ne tient pas sur un projet à un seul contributeur.
 
 **Limite** : le contrôle vérifie la présence d'une fiche, pas sa qualité ; la rédaction reste humaine.
+
+---
+
+## 15. Exigences, preuves et notes de version dans le pipeline
+
+**Décision** : un commit `feat` ou `fix` cite une exigence de `Docs/exigences/` (ou déclare `Exigence: non-applicable`) ; les tests nommés d'après une exigence produisent un rapport de preuves à chaque run ; la promotion génère les notes de version (changements, exigences, fiches KB, preuves) ; le rapprochement registry / CMDB tourne chaque jour et ouvre un incident sur écart.
+
+**Raisons**
+- Flux 1, 6, 7 et 11 de [flux-outils-factice.md](1-fondations/flux-outils-factice.md) : sans contrôle automatique, le lien exigence ↔ code ↔ preuve se perd.
+- Les contrôles réutilisent le patron de la décision 14 : un script testable en local, un job qui l'appelle.
+
+**Limite** : le contrôle vérifie qu'une exigence existante est citée, pas qu'elle est pertinente. Le rapport de preuves ne couvre que les tests nommés d'après une exigence.

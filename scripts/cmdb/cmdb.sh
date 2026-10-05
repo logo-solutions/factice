@@ -12,6 +12,7 @@
 #                                                   -> crée ou met à jour le service déployé ;
 #                                                      affiche l'URL de l'élément de configuration
 #   cmdb.sh get-service <projet> <service> [environnement]   -> JSON du service
+#   cmdb.sh ci-url <projet> <service> [environnement]   -> URL de l'élément de configuration (vide si inconnu)
 #   cmdb.sh list [projet]                           -> services connus (projet, hote, service, env, empreinte)
 set -euo pipefail
 
@@ -99,6 +100,11 @@ case "$cmd" in
         '[.results[] | select(.custom_fields.projet==$p and ($v=="" or .custom_fields.environnement==$v))][0] // empty
          | {id, projet:.custom_fields.projet, service:.name, hote:.parent.name, port:.ports[0],
             environnement:.custom_fields.environnement, empreinte:.custom_fields.empreinte, maj:.last_updated}'
+    ;;
+  ci-url)
+    [[ $# -ge 2 ]] || { echo "usage : ci-url <projet> <service> [environnement]" >&2; exit 1; }
+    id="$("$0" get-service "$@" | jq -r '.id // empty')"
+    [[ -z "$id" ]] || echo "${CMDB_URL}/ipam/services/${id}/"
     ;;
   list)
     api GET /api/ipam/services/ "" "limit=500" \

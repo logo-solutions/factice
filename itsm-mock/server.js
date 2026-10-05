@@ -190,6 +190,7 @@ function createServer({ tokens, dataDir, log = () => {} }) {
           titre: text(body.titre, 'titre', { requis: true }),
           description: text(body.description, 'description', { max: 2000 }),
           environnement: text(body.environnement, 'environnement', { max: 50 }),
+          ci: text(body.ci, 'ci', { max: 500 }),
           demandeur: who.identite,
           etat: type === 'normal' ? 'brouillon' : type === 'standard' ? 'approuve' : 'ouvert',
           cree: now,

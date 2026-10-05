@@ -7,7 +7,7 @@
 #             jamais passé en argument de commande).
 #
 # Usage :
-#   itsm.sh create <standard|normal|incident> <titre> [description] [environnement]   -> affiche l'identifiant
+#   itsm.sh create <standard|normal|incident> <titre> [description] [environnement] [url CMDB]   -> affiche l'identifiant
 #   itsm.sh status <ID>                       -> affiche l'état
 #   itsm.sh show <ID>                         -> affiche la demande (JSON)
 #   itsm.sh list [état]                       -> liste (JSON)
@@ -49,9 +49,9 @@ shift
 
 case "$cmd" in
   create)
-    [[ $# -ge 2 ]] || { echo "usage : create <type> <titre> [description] [environnement]" >&2; exit 1; }
-    call POST /changes "$(jq -n --arg type "$1" --arg titre "$2" --arg description "${3:-}" --arg environnement "${4:-}" \
-      '{type:$type, titre:$titre, description:$description, environnement:$environnement}')" | jq -r '.id'
+    [[ $# -ge 2 ]] || { echo "usage : create <type> <titre> [description] [environnement] [url CMDB]" >&2; exit 1; }
+    call POST /changes "$(jq -n --arg type "$1" --arg titre "$2" --arg description "${3:-}" --arg environnement "${4:-}" --arg ci "${5:-}" \
+      '{type:$type, titre:$titre, description:$description, environnement:$environnement, ci:$ci}')" | jq -r '.id'
     ;;
   status)
     [[ $# -eq 1 ]] || { echo "usage : status <ID>" >&2; exit 1; }
