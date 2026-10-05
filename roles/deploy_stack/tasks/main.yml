@@ -48,7 +48,7 @@
         method: GET
         status_code: [200, 201, 301, 302]
         follow_redirects: safe
-        connect_timeout: "{{ healthcheck_timeout }}"
+        timeout: "{{ healthcheck_timeout }}"
       retries: "{{ healthcheck_retries }}"
       delay: 2
       register: healthcheck_result

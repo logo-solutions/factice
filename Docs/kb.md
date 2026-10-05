@@ -55,3 +55,12 @@ Décision 14 de [decisions.md](decisions.md).
 - **Correctif** : `docker_host` sur `docker_network`, `DOCKER_HOST` sur les tâches `shell` Docker, `ignore_errors` retiré (la tâche est idempotente). Règle : tout module ou commande Docker d'un rôle reçoit `docker_host`. Vérifier : `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock docker network ls | grep factice`.
 - **Origine** : run 37356475601 ; même famille que KB-002.
 - **ITSM** : INC-2026-0001 (ouvert à la main pour ce run ; les suivants le sont par le pipeline).
+
+## KB-006 · Ansible : « Unsupported parameters for (ansible.legacy.uri) module: connect_timeout »
+
+- **Date** : 2026-10-05 · **Composant** : Ansible, rôles `deploy_stack` et `factice`
+- **Symptôme** : la tâche `Check healthcheck endpoints` échoue sur les 30 tentatives avec `Unsupported parameters for (ansible.legacy.uri) module: connect_timeout`, alors que le conteneur a démarré.
+- **Cause** : le module `uri` d'Ansible n'a pas de paramètre `connect_timeout` (c'est `timeout`). Le paramètre existe pour d'autres modules, d'où l'erreur de copie.
+- **Correctif** : `timeout:` à la place, dans `roles/deploy_stack/tasks/main.yml` et `roles/factice/tasks/validation.yml`. Vérifier : `ansible-doc -t module uri | grep -n timeout`.
+- **Origine** : run 37357463837 ; correctif de ce commit.
+- **ITSM** : INC-2026-0002 (ouvert automatiquement par le pipeline).

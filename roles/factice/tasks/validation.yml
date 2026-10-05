@@ -12,7 +12,7 @@
             url: "{{ tier_app_healthcheck_endpoint }}"
             method: GET
             status_code: [200, 201]
-            connect_timeout: 10
+            timeout: 10
           register: app_health
           retries: 5
           delay: 5
@@ -62,7 +62,7 @@
             url: "http://localhost:{{ tier_web_port_http }}/health"
             method: GET
             status_code: [200, 201, 301, 302]
-            connect_timeout: 10
+            timeout: 10
           register: caddy_proxy
           retries: 3
           delay: 2
