@@ -14,7 +14,7 @@
 | Workflows Ansible | Playbooks `deploy-factice-*.yml` | Exécutant | racine du dépôt |
 | CMDB | **NetBox** (vraie CMDB) derrière l'adaptateur `scripts/cmdb/cmdb.sh` | Référentiel | `netbox/`, port 8096 |
 | Documentation produit | `Docs/` dans Git, lue sur github.com | Référentiel | [INDEX.md](../INDEX.md) |
-| Base de connaissances | non mise en place | Référentiel | |
+| Base de connaissances | fiches `KB-NNN` dans [kb.md](../kb.md), lues sur github.com | Référentiel | `Docs/kb.md` |
 
 **Règle d'adaptateur.** Le pipeline ne parle jamais directement à l'ITSM ni à la CMDB : il appelle un script qui porte le contrat. Passer à un vrai ITSM (GLPI, GitLab, ServiceNow) ou à une autre CMDB se fait en réécrivant l'adaptateur, sans toucher à `ci.yml`.
 
@@ -34,7 +34,7 @@
 | 10 | Déploiement → CMDB | **Fait** | étape « Inventaire CMDB » après un déploiement réussi |
 | 11 | Registry → CMDB (rapprochement) | Partiel | `scripts/cmdb/reconcile.sh` ; à lancer à la main, pas encore planifié |
 | 12 | CMDB → ITSM | Partiel | le changement porte l'URL de l'élément de configuration ; pas de lecture de la CMDB par l'ITSM |
-| 13, 14 | Documentation → KB → ITSM | Hors périmètre | pas de base de connaissances |
+| 13, 14 | Documentation → KB → ITSM | Partiel | la KB existe ([kb.md](../kb.md)) ; pas de lien automatique avec l'ITSM |
 
 Précision sur le flux 10 : la cible dit « Ansible écrit dans la CMDB ». Ici c'est l'étape qui suit le playbook, dans le même job, qui écrit. Le résultat est le même (un seul propriétaire de l'attribut `empreinte`, écrit à chaque déploiement) et l'écriture est conditionnée à un déploiement réussi, santé vérifiée.
 
