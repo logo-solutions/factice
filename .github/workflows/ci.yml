@@ -12,6 +12,9 @@ name: CI/CD
 #   après chaque déploiement réussi : inventaire écrit dans la CMDB (flux 10)
 # Secrets supplémentaires : ITSM_TOKEN (droits read, create, link, close), CMDB_TOKEN.
 # Variables facultatives : ITSM_URL, CMDB_URL (défauts : services locaux du Mac Mini).
+# Incidents et KB (flux 13, 14) : un déploiement en échec ouvre un incident ITSM ; l'incident ne se
+#   clôt en succès qu'avec une fiche KB-NNN (itsm.sh kb). Le job kb-check refuse un commit fix sans
+#   fiche dans Docs/kb.md (ou trailer « KB: non-applicable »).
 # Aucun secret n'est passé en argument de commande.
 
 on:
@@ -46,6 +49,23 @@ env:
   CMDB_URL: ${{ vars.CMDB_URL || 'http://127.0.0.1:8096' }}
 
 jobs:
+  kb-check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tout correctif doit capitaliser dans Docs/kb.md
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          TETE: ${{ github.sha }}
+        run: |
+          if [ -z "$BASE" ]; then BASE="0000000"; fi
+          scripts/kb/check-kb.sh "$BASE" "$TETE"
+
   build:
     runs-on: self-hosted
     outputs:
@@ -175,6 +195,17 @@ jobs:
           scripts/itsm/itsm.sh link "$CHANGE_ID" "$DIGEST" "$RUN_URL" integration "$CI_URL"
           scripts/itsm/itsm.sh close "$CHANGE_ID" "$RESULT"
 
+      - name: Ouvrir un incident ITSM (échec du déploiement)
+        if: failure()
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          ID="$(scripts/itsm/itsm.sh create incident \
+            "Échec du déploiement factice en integration" \
+            "Run ${RUN_URL}, commit ${{ github.sha }}" integration)" || exit 0
+          echo "::warning::Incident ${ID} ouvert. Documenter la cause dans Docs/kb.md (fiche KB-NNN), puis : itsm.sh kb ${ID} KB-NNN et itsm.sh close ${ID} succes."
+
   change-gate:
     needs: [build, promote]
     runs-on: self-hosted
@@ -252,3 +283,14 @@ jobs:
         run: |
           scripts/itsm/itsm.sh link "$CHANGE_ID" "$DIGEST" "$RUN_URL" production "$CI_URL"
           scripts/itsm/itsm.sh close "$CHANGE_ID" "$RESULT"
+
+      - name: Ouvrir un incident ITSM (échec du déploiement)
+        if: failure()
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          ID="$(scripts/itsm/itsm.sh create incident \
+            "Échec du déploiement factice en production" \
+            "Run ${RUN_URL}, commit ${{ github.sha }}" production)" || exit 0
+          echo "::warning::Incident ${ID} ouvert. Documenter la cause dans Docs/kb.md (fiche KB-NNN), puis : itsm.sh kb ${ID} KB-NNN et itsm.sh close ${ID} succes."

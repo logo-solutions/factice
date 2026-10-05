@@ -13,6 +13,7 @@ Aucune dépendance (Node 20, `node:http`). Données dans un fichier JSON (`chang
 | Approuver / refuser | `approve <ID>`, `reject <ID> <motif>` | `POST /changes/:id/approve\|reject` | `approve` |
 | Lier un déploiement | `link <ID> <empreinte> [run_url] [env] [ci_url]` | `POST /changes/:id/link` | `link` |
 | Clore | `close <ID> <succes\|echec>` | `POST /changes/:id/close` | `close` |
+| Rattacher une fiche KB (incident) | `kb <INC-ID> <KB-NNN> [url]` | `POST /changes/:id/kb` | `link` |
 | Garde de déploiement | `require-approved <ID>` (code 3 si non approuvé) | `GET /changes/:id` | `read` |
 
 Types : `standard` (pré-approuvé à la création), `normal` (brouillon, approbation humaine), `incident` (ouvert, sans déploiement).
@@ -22,6 +23,7 @@ Règles simulées :
 - le demandeur est l'identité du jeton, jamais une valeur du corps de requête ;
 - l'approbateur doit être différent du demandeur (ACC-04) ;
 - on ne peut pas lier un déploiement avant approbation (409) ;
+- un incident ne se clôt en `succes` qu'avec au moins une fiche KB rattachée (409 sinon) ; `echec` reste possible sans fiche ;
 - chaque demande garde son `historique` (qui, quand, quoi).
 
 ## Jetons et rôles (ACC-07)

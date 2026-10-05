@@ -87,6 +87,8 @@ async function detail(id) {
       `${date(p.date)} · ${p.environnement || '-'} · `, el('code', {}, p.empreinte),
       ' · run ', lienSur(p.run_url), ' · élément CMDB ', lienSur(p.ci)));
   }
+  const fiches = el('ul');
+  for (const k of i.kb || []) fiches.append(el('li', {}, el('code', {}, k.fiche), ' · ', lienSur(k.url)));
   const histo = el('ul');
   for (const h of i.historique) {
     const extra = h.motif ? ` — ${h.motif}` : h.resultat ? ` — ${h.resultat}` : '';
@@ -95,6 +97,7 @@ async function detail(id) {
   d.replaceChildren(
     el('h2', {}, 'Détail'), dl,
     el('h2', {}, 'Déploiements'), i.deploiements.length ? deps : el('p', {}, 'Aucun'),
+    ...(i.type === 'incident' ? [el('h2', {}, 'Fiches KB'), (i.kb || []).length ? fiches : el('p', {}, 'Aucune')] : []),
     el('h2', {}, 'Historique'), histo);
   d.hidden = false;
   d.scrollIntoView({ behavior: 'smooth', block: 'nearest' });

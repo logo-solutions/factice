@@ -15,7 +15,8 @@
 #   itsm.sh approve <ID>
 #   itsm.sh reject <ID> <motif>
 #   itsm.sh link <ID> <empreinte> [url du run] [environnement] [url de l'élément de configuration CMDB]
-#   itsm.sh close <ID> <succes|echec>
+#   itsm.sh close <ID> <succes|echec>        (un incident ne se clôt en succès qu'avec une fiche KB)
+#   itsm.sh kb <INC-ID> <KB-NNN> [url]       -> rattache l'incident à sa fiche de Docs/kb.md
 set -euo pipefail
 
 ITSM_URL="${ITSM_URL:-http://127.0.0.1:8095}"
@@ -43,7 +44,7 @@ call() {
 }
 
 cmd="${1:-}"
-[[ -n "$cmd" ]] || { sed -n '2,19p' "$0" >&2; exit 1; }
+[[ -n "$cmd" ]] || { sed -n '2,21p' "$0" >&2; exit 1; }
 shift
 
 case "$cmd" in
@@ -96,6 +97,11 @@ case "$cmd" in
     [[ $# -eq 2 ]] || { echo "usage : close <ID> <succes|echec>" >&2; exit 1; }
     check_id "$1"
     call POST "/changes/$1/close" "$(jq -n --arg resultat "$2" '{resultat:$resultat}')" | jq -r '"\(.id) : \(.etat)"'
+    ;;
+  kb)
+    [[ $# -ge 2 ]] || { echo "usage : kb <INC-ID> <KB-NNN> [url]" >&2; exit 1; }
+    check_id "$1"
+    call POST "/changes/$1/kb" "$(jq -n --arg fiche "$2" --arg url "${3:-}" '{fiche:$fiche, url:$url}')" | jq -r '"\(.id) : fiche \(.kb[-1].fiche)"'
     ;;
   *)
     echo "commande inconnue : ${cmd}" >&2

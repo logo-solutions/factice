@@ -121,7 +121,21 @@ test('incident : ouvert puis clos, sans déploiement', async () => {
   assert.match(c.body.id, /^INC-/);
   assert.equal(c.body.etat, 'ouvert');
   assert.equal((await s.api('POST', `/changes/${c.body.id}/link`, 'tp', { empreinte: 'sha256:abcdef1234' })).status, 409);
+  assert.equal((await s.api('POST', `/changes/${c.body.id}/close`, 'tp', { resultat: 'succes' })).status, 409);
+  assert.equal((await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'kb-2' })).status, 400);
+  const k = await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'KB-002', url: 'https://example.org/kb' });
+  assert.equal(k.body.kb[0].fiche, 'KB-002');
   assert.equal((await s.api('POST', `/changes/${c.body.id}/close`, 'tp', { resultat: 'succes' })).body.etat, 'clos');
+  assert.equal((await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'KB-003' })).status, 409);
+  await s.arreter();
+});
+
+test('incident en échec : clôture possible sans fiche ; un changement ne porte pas de fiche', async () => {
+  const s = await demarrer();
+  const i = await s.api('POST', '/changes', 'tp', { type: 'incident', titre: 'Déploiement échoué' });
+  assert.equal((await s.api('POST', `/changes/${i.body.id}/close`, 'tp', { resultat: 'echec' })).body.etat, 'clos');
+  const c = await s.api('POST', '/changes', 'tp', { type: 'standard', titre: 'X' });
+  assert.equal((await s.api('POST', `/changes/${c.body.id}/kb`, 'tp', { fiche: 'KB-001' })).status, 409);
   await s.arreter();
 });
 

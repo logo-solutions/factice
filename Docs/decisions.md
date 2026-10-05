@@ -185,3 +185,17 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 **Alternative écartée** : Gitflow (`develop`, `release/*`, `hotfix/*`). Il duplique l'information déjà portée par les dépôts Nexus et retarde l'intégration.
 
 **Conclusion** : trunk-based. Règles détaillées dans [trunk-based.md](trunk-based.md).
+
+---
+
+## 14. Capitalisation systématique : incident, fiche KB, ITSM
+
+**Décision** : tout incident ou correctif laisse une fiche dans [kb.md](kb.md), dans le même push que le correctif. Un déploiement en échec ouvre un incident dans l'ITSM ; l'incident ne se clôt en succès qu'une fois rattaché à une fiche. Le job `kb-check` refuse un commit `fix` sans fiche.
+
+**Raisons**
+- Sans contrôle, la fiche est oubliée : le même piège a coûté trois runs (KB-002, KB-005).
+- Le lien ITSM ↔ KB rend la connaissance retrouvable depuis l'incident, c'est le flux 13-14 de [flux-outils-factice.md](1-fondations/flux-outils-factice.md).
+
+**Alternative écartée** : une règle de revue seule. Elle ne tient pas sur un projet à un seul contributeur.
+
+**Limite** : le contrôle vérifie la présence d'une fiche, pas sa qualité ; la rédaction reste humaine.

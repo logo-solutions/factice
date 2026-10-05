@@ -2,7 +2,15 @@
 
 Une fiche par problème rencontré : symptôme, cause, correctif, et le commit ou le run où il est apparu. À ajouter à la fin, jamais réécrite (une fiche fausse est corrigée par une nouvelle fiche qui la remplace). Les fiches sont lisibles sur github.com, chacune avec un lien permanent par ancre.
 
-Format : `KB-NNN`, titre, date, composant.
+Format : `KB-NNN`, titre, date, composant. Une ligne **ITSM** donne l'incident (`INC-AAAA-NNNN`) quand le pipeline en a ouvert un.
+
+## Règle : chaque incident ou correctif crée une fiche, dans le même push
+
+1. Un déploiement en échec ouvre un incident dans l'ITSM (étape « Ouvrir un incident ITSM » de `ci.yml`).
+2. Le correctif est un commit `fix…` qui ajoute la fiche `KB-NNN` ici. Le job `kb-check` ([scripts/kb/check-kb.sh](../scripts/kb/check-kb.sh)) échoue sinon. Dérogation : trailer `KB: KB-NNN` (fiche existante) ou `KB: non-applicable` avec la raison dans le message.
+3. L'incident est rattaché à la fiche (`itsm.sh kb INC-… KB-NNN`) puis clos ; l'ITSM refuse la clôture en succès sans fiche.
+
+Décision 14 de [decisions.md](decisions.md).
 
 ---
 
@@ -46,3 +54,4 @@ Format : `KB-NNN`, titre, date, composant.
 - **Cause** : `docker_network` n'avait pas `docker_host`, donc visait le Docker Desktop arrêté ; l'échec était masqué par `ignore_errors: true`. Le réseau n'a jamais été créé dans Colima.
 - **Correctif** : `docker_host` sur `docker_network`, `DOCKER_HOST` sur les tâches `shell` Docker, `ignore_errors` retiré (la tâche est idempotente). Règle : tout module ou commande Docker d'un rôle reçoit `docker_host`. Vérifier : `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock docker network ls | grep factice`.
 - **Origine** : run 37356475601 ; même famille que KB-002.
+- **ITSM** : INC-2026-0001 (ouvert à la main pour ce run ; les suivants le sont par le pipeline).

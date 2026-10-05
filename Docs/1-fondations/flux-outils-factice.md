@@ -34,7 +34,7 @@
 | 10 | Déploiement → CMDB | **Fait** | étape « Inventaire CMDB » après un déploiement réussi |
 | 11 | Registry → CMDB (rapprochement) | Partiel | `scripts/cmdb/reconcile.sh` ; à lancer à la main, pas encore planifié |
 | 12 | CMDB → ITSM | Partiel | le changement porte l'URL de l'élément de configuration ; pas de lecture de la CMDB par l'ITSM |
-| 13, 14 | Documentation → KB → ITSM | Partiel | la KB existe ([kb.md](../kb.md)) ; pas de lien automatique avec l'ITSM |
+| 13, 14 | Documentation → KB → ITSM | **Fait** pour les incidents de déploiement | un déploiement en échec ouvre un incident ITSM ; l'incident ne se clôt en succès qu'avec une fiche `KB-NNN` ([kb.md](../kb.md)) ; le job `kb-check` refuse un commit `fix` sans fiche. Reste manuel : rédiger la fiche et rattacher l'incident (`itsm.sh kb`) |
 
 Précision sur le flux 10 : la cible dit « Ansible écrit dans la CMDB ». Ici c'est l'étape qui suit le playbook, dans le même job, qui écrit. Le résultat est le même (un seul propriétaire de l'attribut `empreinte`, écrit à chaque déploiement) et l'écriture est conditionnée à un déploiement réussi, santé vérifiée.
 
@@ -106,6 +106,18 @@ NEXUS_USER=... NEXUS_PASSWORD=... CMDB_TOKEN=... scripts/cmdb/reconcile.sh
 
 Les deux services doivent tourner sur le Mac Mini, là où s'exécute le runner : leurs ports sont liés à `127.0.0.1`. S'ils sont arrêtés, le pipeline **échoue** (pas de déploiement sans trace) ; c'est le comportement voulu.
 
+### Incident, KB et ITSM (flux 13, 14)
+
+```bash
+# 1. le pipeline a ouvert l'incident (avertissement dans le run) : INC-2026-0003
+# 2. rédiger la fiche KB-NNN dans Docs/kb.md, avec la ligne « ITSM : INC-2026-0003 »
+# 3. rattacher l'incident à la fiche, puis le clore
+ITSM_TOKEN=$ITSM_TOKEN_LOIC scripts/itsm/itsm.sh kb INC-2026-0003 KB-005 "https://github.com/logo-solutions/factice/blob/main/Docs/kb.md#kb-005--..."
+ITSM_TOKEN=... scripts/itsm/itsm.sh close INC-2026-0003 succes   # refusé (409) sans fiche
+```
+
+Un incident clos en `echec` (non résolu) n'exige pas de fiche. L'interface web du faux ITSM affiche les fiches rattachées.
+
 ## Écarts et suites
 
 | Écart | Suite |
@@ -113,5 +125,5 @@ Les deux services doivent tourner sur le Mac Mini, là où s'exécute le runner 
 | Jeton CMDB d'administration | créer un jeton NetBox en écriture limitée au modèle (ACC-07) |
 | Rapprochement manuel, un seul sens (CMDB vers registry) | planifier ; ajouter le sens inverse (empreintes déployées absentes de la CMDB) |
 | Le faux ITSM n'a ni interface d'approbation, ni TLS, ni authentification forte | acceptable pour un double de test ; remplacer par un vrai ITSM en gardant `itsm.sh` |
-| Flux 1, 6, 7, 13, 14 | à traiter quand les exigences de factice seront rattachées à des tests |
+| Flux 1, 6, 7 | à traiter quand les exigences de factice seront rattachées à des tests |
 | Le changement approuvé n'est pas rattaché à une empreinte précise avant le déploiement | l'ITSM enregistre l'empreinte au `link` ; contrôler qu'elle correspond à la release prévue |

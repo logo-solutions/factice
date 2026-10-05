@@ -19,6 +19,7 @@ const UI_FILES = {
 const MAX_BODY = 64 * 1024;
 const ID_RE = /^(CHG|INC)-\d{4}-\d{4}$/;
 const EMPREINTE_RE = /^[A-Za-z0-9:._-]{7,200}$/;
+const KB_RE = /^KB-[0-9]{3}$/;
 
 class HttpError extends Error {
   constructor(status, message) {
@@ -195,6 +196,7 @@ function createServer({ tokens, dataDir, log = () => {} }) {
           mis_a_jour: now,
           approbateur: null,
           deploiements: [],
+          kb: [],
           resultat: null,
           historique: [],
         };
@@ -211,6 +213,7 @@ function createServer({ tokens, dataDir, log = () => {} }) {
     }
 
     const item = getItem(store, parts[1]);
+    item.kb ??= [];
 
     if (parts.length === 2) {
       if (req.method !== 'GET') throw new HttpError(405, 'méthode non autorisée');
@@ -251,6 +254,15 @@ function createServer({ tokens, dataDir, log = () => {} }) {
       item.deploiements.push(dep);
       item.etat = 'en_cours';
       event(item, who.identite, 'deploiement', { empreinte, environnement: dep.environnement });
+    } else if (action === 'kb') {
+      need(who, 'link');
+      if (item.type !== 'incident') throw new HttpError(409, 'seul un incident se rattache à une fiche KB');
+      if (item.etat === 'clos') throw new HttpError(409, 'incident clos : rattachement impossible');
+      const fiche = text(body.fiche, 'fiche', { requis: true });
+      if (!KB_RE.test(fiche)) throw new HttpError(400, 'fiche invalide (KB-NNN)');
+      const ref = { fiche, url: text(body.url, 'url', { max: 500 }), date: new Date().toISOString() };
+      item.kb.push(ref);
+      event(item, who.identite, 'kb', { motif: fiche });
     } else if (action === 'close') {
       need(who, 'close');
       if (item.etat !== 'en_cours' && item.etat !== 'ouvert') {
@@ -258,6 +270,9 @@ function createServer({ tokens, dataDir, log = () => {} }) {
       }
       const resultat = text(body.resultat, 'resultat', { requis: true });
       if (!['succes', 'echec'].includes(resultat)) throw new HttpError(400, 'resultat : succes ou echec');
+      if (item.type === 'incident' && resultat === 'succes' && item.kb.length === 0) {
+        throw new HttpError(409, 'incident résolu sans fiche KB : rattacher une fiche (kb) avant la clôture');
+      }
       item.etat = 'clos';
       item.resultat = resultat;
       event(item, who.identite, 'cloture', { resultat });
