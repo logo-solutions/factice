@@ -6,31 +6,38 @@ Les flux décrits sont la **cible**. Ils sont à valider avec les propriétaires
 
 ## Outils
 
-| Outil | Rôle dans la chaîne |
-|---|---|
-| Référentiel d'exigences | source des exigences ; reçoit les preuves de vérification |
-| ITSM | demandes, changements, incidents ; trace des changements, approbation humaine des changements normaux |
-| GitLab | code, demandes de fusion, pipelines ; porte le blocage technique de la production (environnement protégé) |
-| GitLab Runner | exécute les jobs du pipeline (build, tests, contrôles, promotion) |
-| Registry | stocke les artefacts par empreinte, avec SBOM et métadonnées ; source unique de ce qui est déployable |
-| Workflows Ansible | déploient l'artefact promu, référencé par son empreinte |
-| CMDB | inventaire de ce qui est réellement déployé ; réconcilié avec le registry |
-| Gestion de documentation produit | manuels, notes de version, fiches produit |
-| Base de connaissances | procédures d'exploitation, résolutions d'incidents |
+Les outils sont de deux natures, et les diagrammes les distinguent par la forme :
+
+- **Référentiel** (cylindre) : l'outil **détient des données** et en est la source de vérité (exigences, tickets, code, artefacts, inventaire, documents). Les flux y entrent et en sortent, il ne fait rien de lui-même.
+- **Exécutant** (rectangle) : l'outil **fait tourner un traitement** (jobs, playbooks) et ne garde rien en propre.
+
+| Outil | Nature | Rôle dans la chaîne |
+|---|---|---|
+| Référentiel d'exigences | Référentiel | source des exigences ; reçoit les preuves de vérification |
+| ITSM | Référentiel | demandes, changements, incidents ; trace des changements, approbation humaine des changements normaux |
+| GitLab | Référentiel | code, demandes de fusion, définition des pipelines ; porte le blocage technique de la production (environnement protégé) |
+| GitLab Runner | Exécutant | exécute les jobs du pipeline (build, tests, contrôles, promotion) |
+| Registry | Référentiel | stocke les artefacts par empreinte, avec SBOM et métadonnées ; source unique de ce qui est déployable |
+| Workflows Ansible | Exécutant | déploient l'artefact promu, référencé par son empreinte |
+| CMDB | Référentiel | inventaire de ce qui est réellement déployé ; réconcilié avec le registry |
+| Gestion de documentation produit | Référentiel | manuels, notes de version, fiches produit |
+| Base de connaissances | Référentiel | procédures d'exploitation, résolutions d'incidents |
+
+GitLab est ici classé comme référentiel : ce qui compte pour la chaîne est ce qu'il détient (code, demandes de fusion, règles de protection). L'exécution des pipelines est assurée par le Runner.
 
 ## Vue 1 : flux de données
 
 ```mermaid
 flowchart LR
-    REQ["Référentiel d'exigences"]
-    ITSM["ITSM"]
-    GL["GitLab"]
+    REQ[("Référentiel d'exigences")]
+    ITSM[("ITSM")]
+    GL[("GitLab")]
     RUN["GitLab Runner"]
     REG[("Registry")]
     ANS["Workflows Ansible"]
     CMDB[("CMDB")]
-    DOC["Documentation produit"]
-    KB["Base de connaissances"]
+    DOC[("Documentation produit")]
+    KB[("Base de connaissances")]
 
     REQ -->|"1. identifiants d'exigences"| GL
     ITSM -->|"2. changement approuvé"| GL
@@ -108,11 +115,11 @@ Points à retenir :
 ```mermaid
 flowchart TB
     subgraph PILOTAGE["Pilotage et exigences"]
-        REQ["Référentiel d'exigences"]
-        ITSM["ITSM"]
+        REQ[("Référentiel d'exigences")]
+        ITSM[("ITSM")]
     end
     subgraph FABRICATION["Fabrication"]
-        GL["GitLab"]
+        GL[("GitLab")]
         RUN["GitLab Runner"]
     end
     subgraph LIVRAISON["Livraison"]
@@ -124,8 +131,8 @@ flowchart TB
         ENV["Environnements cibles"]
     end
     subgraph SAVOIR["Documentation et savoir"]
-        DOC["Documentation produit"]
-        KB["Base de connaissances"]
+        DOC[("Documentation produit")]
+        KB[("Base de connaissances")]
     end
 
     REQ --> GL

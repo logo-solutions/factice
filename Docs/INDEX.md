@@ -70,6 +70,16 @@
 - [architecture-automatisation.md](5-gouvernance/automatisation/architecture-automatisation.md) — Architecture de l'automatisation, réduction de la friction
 - [presentation-directeur.md](5-gouvernance/automatisation/presentation-directeur.md) — Présentation stakeholder
 
+### 📋 Exigences : ce qu'on demande aux éditeurs
+
+**[exigences/](exigences/README.md)** — Référentiel vivant des exigences (contexte, enjeux, exigences par domaine, preuves attendues)
+
+- [00-contexte-enjeux.md](exigences/00-contexte-enjeux.md) — Pourquoi, périmètre, acteurs
+- [10-controle-acces-segregation.md](exigences/10-controle-acces-segregation.md) — Ségrégation logique, rôles, authentification, traçabilité des accès
+- [organisation.md](exigences/organisation.md) — Règle dépôt / wiki, contrôles du pipeline, audit
+- [modeles/](exigences/modeles/gabarit-exigence.md) — Gabarit d'exigence, page de consultation (wiki), réponse d'éditeur
+- [journal.md](exigences/journal.md) — Historique des changements
+
 ---
 
 ## 🎯 Par audience
