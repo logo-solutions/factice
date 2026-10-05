@@ -21,7 +21,7 @@ Ce document décrit l'isolation **réelle** de factice, puis l'écart avec la ci
 |---|---|---|---|
 | Caddy | 8070 | 9080 | `http://:PORT` : **toutes les interfaces** de l'hôte |
 | Conteneur App | 3000 | 3001 | `"PORT_HÔTE:PORT_INTERNE"` dans le fichier Compose : **toutes les interfaces**, sans liaison à `127.0.0.1` |
-| PostgreSQL natif | 5432 | 5433 | configuration par défaut de l'installation |
+| PostgreSQL natif | 5432 | 5432 (même cluster) | localhost seulement ; isolation par base et rôle, pas par port |
 | Interface d'administration Caddy | — | — | désactivée |
 
 Deux conséquences :

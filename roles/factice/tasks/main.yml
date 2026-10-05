@@ -42,13 +42,13 @@
         - Framework: {{ tier_bdd_framework }}
         - Test Directory: {{ tier_bdd_test_dir }}
 
+- name: Deploy Tier 1 - Database (avant l'application, qui en dépend)
+  include_tasks: tier_db.yml
+  when: tier_db_enabled | bool
+
 - name: Deploy Tier 1 - Application Container
   include_tasks: tier_app.yml
   when: tier_app_enabled | bool
-
-- name: Deploy Tier 1 - Database
-  include_tasks: tier_db.yml
-  when: tier_db_enabled | bool
 
 - name: Deploy Tier 2 - Web Server
   include_tasks: tier_web.yml

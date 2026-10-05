@@ -8,7 +8,7 @@ factice sépare une application en trois tiers aux modes d'exécution volontaire
 |---|---|---|---|
 | Web | Reverse proxy HTTP | Caddy natif, installé par Homebrew | LaunchAgent macOS |
 | App | API Node.js / Express | Conteneur Docker | `roles/deploy_stack`, appelé par `roles/factice` |
-| BDD | Persistance | PostgreSQL 16 natif, installé par Homebrew | `brew services` |
+| BDD | Persistance | PostgreSQL 18 natif, installé par Homebrew | `brew services` |
 
 Une seule instance par tier et par environnement. Pas de haute disponibilité : ce n'est pas l'objet de la maquette.
 
@@ -20,7 +20,7 @@ flowchart TD
     subgraph hôte [Hôte macOS]
         W["Tier Web<br/>Caddy natif (LaunchAgent)<br/>:8070 intégration, :9080 production"]
         A["Tier App<br/>conteneur Node.js<br/>:3000 intégration, :3001 production"]
-        D["Tier BDD<br/>PostgreSQL 16 natif<br/>:5432 intégration, :5433 production"]
+        D["Tier BDD<br/>PostgreSQL 18 natif<br/>:5432, un cluster, une base par environnement"]
         W -->|reverse proxy| A
         A -->|TCP| D
     end
@@ -55,7 +55,7 @@ API applicative de l'exemple :
 
 ### Tier BDD
 
-- PostgreSQL 16 installé par Homebrew, démarré par `brew services`.
+- PostgreSQL 18 installé par Homebrew, démarré par `brew services`.
 - Une base et un utilisateur par environnement : `factice_integration` et `factice_production`.
 - Le mot de passe de l'utilisateur vient du coffre Ansible, jamais du dépôt.
 - Accessible en local uniquement.
@@ -66,7 +66,7 @@ API applicative de l'exemple :
 |---|---|---|
 | Web (Caddy) | 8070 | 9080 |
 | App (hôte → conteneur) | 3000 → 3000 | 3001 → 3000 |
-| BDD | 5432 | 5433 |
+| BDD | 5432 | 5432 (même cluster, autre base) |
 | Base et utilisateur | `factice_integration` | `factice_production` |
 
 Chaque environnement a son répertoire d'installation (`~/factice/<environnement>`), sa base et ses secrets : aucune ressource n'est partagée entre les deux.

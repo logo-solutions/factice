@@ -104,7 +104,7 @@ L'image est tirée par empreinte : ce qui tourne est exactement ce qui a été p
 | Environnement | Intégration | Production |
 |---|---|---|
 | **Port HTTP** | 8070 | 9080 |
-| **Base de données** | 5432 | 5433 |
+| **Base de données** | 5432 | 5432 (même cluster, autre base) |
 | **Déploiement** | Automatique à chaque poussée sur `main` | Manuel via `workflow_dispatch` |
 | **Rôle** | Validation rapide du candidat en conditions réalistes | Décision humaine, avant mise en service réelle |
 | **Sur le même hôte macOS ?** | Oui | Oui |

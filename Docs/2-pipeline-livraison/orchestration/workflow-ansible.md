@@ -34,7 +34,7 @@ graph LR
 
 ```mermaid
 graph TD
-    B1["brew install postgresql@16"] --> B2["brew services start"]
+    B1["brew install postgresql@18"] --> B2["brew services start"]
     B2 --> B3["Création de l'utilisateur<br/>(mot de passe du coffre Ansible)"]
     B3 --> B4["Création de la base de l'environnement"]
     B4 --> B5["Attente de la connexion<br/>SELECT 1, 10 tentatives"]
@@ -84,7 +84,7 @@ Les valeurs propres à un environnement (ports, répertoires, noms de base, éti
 | Répertoire | `~/factice/integration` | `~/factice/production` |
 | Web | 8070 | 9080 |
 | App | 3000 | 3001 |
-| BDD | 5432 | 5433 |
+| BDD | 5432 | 5432 (même cluster, autre base) |
 | LaunchAgent | `com.factice.web.integration` | `com.factice.web.production` |
 
 - **Tier App** : le conteneur joint la base native par `host.docker.internal` (déclaré par `extra_hosts` dans le fichier Compose). L'image est soit la release passée en `factice_release_image`, soit une image Node générique en développement.

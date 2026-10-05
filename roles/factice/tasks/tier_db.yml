@@ -1,118 +1,83 @@
 ---
-- name: Deploy Tier 1 - Database (PostgreSQL)
+# Tier BDD : PostgreSQL natif (cluster Homebrew), une base et un rôle par environnement.
+# Un seul cluster pour l'intégration et la production (port 5432, localhost seulement) :
+# les conteneurs l'atteignent via host.docker.internal.
+# Aucune tâche n'ignore ses erreurs : un échec ici doit casser le déploiement.
+- name: Deploy Tier 1 - Database (PostgreSQL natif)
+  environment:
+    PATH: "{{ tier_db_bin }}:{{ ansible_env.PATH }}"
   block:
-    - name: Deploy PostgreSQL via Homebrew
-      block:
-        - name: Install PostgreSQL via Homebrew
-          homebrew:
-            name: postgresql@16
-            state: present
+    - name: Install PostgreSQL via Homebrew
+      community.general.homebrew:
+        name: "{{ tier_db_formula }}"
+        state: present
 
-        - name: Create PostgreSQL data directory
-          file:
-            path: "{{ tier_db_data_dir }}"
-            state: directory
-            mode: "0755"
-          become: true
+    - name: Start PostgreSQL service (si absent)
+      ansible.builtin.shell: |
+        pg_isready -h {{ tier_db_host }} -p {{ tier_db_port }} -q && exit 0
+        brew services start {{ tier_db_formula }}
+        for i in $(seq 1 30); do
+          pg_isready -h {{ tier_db_host }} -p {{ tier_db_port }} -q && echo started && exit 0
+          sleep 1
+        done
+        exit 1
+      register: pg_start
+      changed_when: "'started' in pg_start.stdout"
 
-        - name: Initialize PostgreSQL database cluster
-          shell: |
-            initdb -D {{ tier_db_data_dir }} -U postgres --locale=en_US.UTF-8
-          args:
-            creates: "{{ tier_db_data_dir }}/PG_VERSION"
-          become: true
-          ignore_errors: true
+    - name: Create role (mot de passe réaffirmé à chaque déploiement)
+      ansible.builtin.shell: psql -d postgres -v ON_ERROR_STOP=1 -h {{ tier_db_host }} -p {{ tier_db_port }} -f -
+      args:
+        stdin: |
+          DO $$ BEGIN
+            IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '{{ tier_db_user }}') THEN
+              CREATE ROLE {{ tier_db_user }} LOGIN PASSWORD '{{ tier_db_password }}';
+            ELSE
+              ALTER ROLE {{ tier_db_user }} PASSWORD '{{ tier_db_password }}';
+            END IF;
+          END $$;
+      changed_when: false
+      no_log: true
 
-        - name: Start PostgreSQL service
-          shell: |
-            brew services start postgresql@16
-          register: pg_start
-          ignore_errors: true
+    - name: Create database
+      ansible.builtin.shell: |
+        psql -d postgres -tA -h {{ tier_db_host }} -p {{ tier_db_port }} \
+          -c "SELECT 1 FROM pg_database WHERE datname = '{{ tier_db_name }}'" | grep -q 1 && exit 0
+        createdb -h {{ tier_db_host }} -p {{ tier_db_port }} -O {{ tier_db_user }} {{ tier_db_name }}
+        echo created
+      register: db_create
+      changed_when: "'created' in db_create.stdout"
 
-        - name: Wait for PostgreSQL to be ready
-          wait_for:
-            host: "{{ tier_db_host }}"
-            port: "{{ tier_db_port }}"
-            timeout: 30
-          ignore_errors: true
-
-        - name: Create database user and database
-          shell: |
-            createuser -U postgres {{ tier_db_user }} 2>/dev/null || true
-            createdb -U postgres -O {{ tier_db_user }} {{ tier_db_name }} 2>/dev/null || true
-            psql -U postgres -c "ALTER USER {{ tier_db_user }} WITH PASSWORD '{{ tier_db_password }}';" 2>/dev/null || true
-          ignore_errors: true
-
-      when: tier_db_type == "homebrew"
-
-    - name: Wait for database connection
-      postgresql_query:
-        db: "{{ tier_db_name }}"
-        login_user: "{{ tier_db_user }}"
-        login_password: "{{ tier_db_password }}"
-        login_host: "{{ tier_db_host }}"
-        port: "{{ tier_db_port }}"
-        query: "SELECT 1"
-      register: db_ready
-      retries: 10
-      delay: 3
-      until: db_ready is succeeded
-      ignore_errors: true
-
-    - name: Run database initialization script
-      postgresql_query:
-        db: "{{ tier_db_name }}"
-        login_user: "{{ tier_db_user }}"
-        login_password: "{{ tier_db_password }}"
-        login_host: "{{ tier_db_host }}"
-        port: "{{ tier_db_port }}"
-        query: |
-          CREATE TABLE IF NOT EXISTS schema_version (
-            version_rank INTEGER,
-            installed_version VARCHAR(50) NOT NULL,
-            description VARCHAR(200) NOT NULL,
-            type VARCHAR(20) NOT NULL,
-            script VARCHAR(1000) NOT NULL,
-            checksum INTEGER,
-            installed_by VARCHAR(100) NOT NULL,
-            installed_on TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            execution_time INTEGER NOT NULL,
-            success BOOLEAN NOT NULL
+    - name: Create schema (idempotent)
+      ansible.builtin.shell: >
+        psql -h {{ tier_db_host }} -p {{ tier_db_port }} -U {{ tier_db_user }}
+        -d {{ tier_db_name }} -v ON_ERROR_STOP=1 -f -
+      args:
+        stdin: |
+          CREATE TABLE IF NOT EXISTS items (
+            id SERIAL PRIMARY KEY,
+            name TEXT NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
-      when: db_ready is succeeded
-      ignore_errors: true
+      environment:
+        PGPASSWORD: "{{ tier_db_password }}"
+      changed_when: false
+      no_log: true
 
     - name: Create database backup directory
-      file:
+      ansible.builtin.file:
         path: "{{ tier_db_backup_dir }}"
         state: directory
         mode: "0755"
 
     - name: Test database connection
-      shell: |
-        psql -h {{ tier_db_host }} -p {{ tier_db_port }} -U {{ tier_db_user }} -d {{ tier_db_name }} -c "SELECT 1;" 2>/dev/null
-      register: db_test
-      ignore_errors: true
+      ansible.builtin.shell: >
+        psql -h {{ tier_db_host }} -p {{ tier_db_port }} -U {{ tier_db_user }}
+        -d {{ tier_db_name }} -tA -c "SELECT count(*) FROM items"
+      environment:
+        PGPASSWORD: "{{ tier_db_password }}"
+      changed_when: false
+      no_log: true
 
     - name: Log database tier deployment
-      debug:
-        msg: |
-          Database Tier Deployed Successfully
-          Type: {{ tier_db_type }} (PostgreSQL 16)
-          Host: {{ tier_db_host }}
-          Port: {{ tier_db_port }}
-          Database: {{ tier_db_name }}
-          User: {{ tier_db_user }}
-          Data Directory: {{ tier_db_data_dir }}
-          Backup Directory: {{ tier_db_backup_dir }}
-          Connection Status: {{ "OK" if db_test is succeeded else "Check logs" }}
-
-  rescue:
-    - name: Log database tier deployment error
-      debug:
-        msg: |
-          Database tier deployment encountered an error
-          Check PostgreSQL service: brew services list
-          Logs: /usr/local/var/log/postgres.log
-          Connection test: psql -h {{ tier_db_host }} -p {{ tier_db_port }} -U {{ tier_db_user }} -d {{ tier_db_name }}
-      failed_when: false
+      ansible.builtin.debug:
+        msg: "BDD prête : {{ tier_db_formula }} sur {{ tier_db_host }}:{{ tier_db_port }}, base {{ tier_db_name }}, rôle {{ tier_db_user }}"

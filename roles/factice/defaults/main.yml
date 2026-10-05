@@ -30,18 +30,20 @@ tier_app_healthcheck_delay: 5
 
 # Tier 1: Database (PostgreSQL)
 tier_db_enabled: true
-tier_db_type: "homebrew"  # homebrew | docker
+tier_db_type: "homebrew"
+tier_db_formula: "postgresql@18"
+tier_db_bin: "/opt/homebrew/opt/{{ tier_db_formula }}/bin"
 tier_db_name: "factice_{{ factice_environment }}"
 tier_db_user: "factice_{{ factice_environment }}"
 tier_db_password: "{{ vault_factice_db_password | default('changeme') }}"
 tier_db_host: "localhost"
 # Adresse de la base vue depuis le conteneur applicatif (hôte Docker).
 tier_db_host_from_app: "host.docker.internal"
-tier_db_port: "{{ 5433 if factice_environment == 'production' else 5432 }}"
+# Cluster unique : l'intégration et la production partagent le port 5432 (5433 est pris par un tunnel SSH).
+tier_db_port: 5432
 tier_db_port_internal: 5432
 tier_db_container_name: "factice-db"
 tier_db_docker_image: "postgres:16-alpine"
-tier_db_data_dir: "{{ factice_base_dir }}/db-data"
 tier_db_backup_dir: "{{ factice_base_dir }}/db-backups"
 tier_db_init_script: "{{ factice_base_dir }}/db/init.sql"
 tier_db_pool_size: 20

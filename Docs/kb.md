@@ -64,3 +64,13 @@ Décision 14 de [decisions.md](decisions.md).
 - **Correctif** : `timeout:` à la place, dans `roles/deploy_stack/tasks/main.yml` et `roles/factice/tasks/validation.yml`. Vérifier : `ansible-doc -t module uri | grep -n timeout`.
 - **Origine** : run 37357463837 ; correctif de ce commit.
 - **ITSM** : INC-2026-0002 (ouvert automatiquement par le pipeline).
+
+## KB-007 · Tier BDD jamais exécuté : app déployée avant la base, PostgreSQL absent, schéma manquant
+
+- **Date** : 2026-10-05 · **Composant** : Ansible, rôle `factice` (tiers BDD et validation)
+- **Symptôme** : `Check healthcheck endpoints` échoue 30 fois ; `/health` répond `connect ECONNREFUSED 192.168.5.2:5432`. Le déploiement s'affichait pourtant « completed successfully » malgré une validation en erreur.
+- **Cause** : plusieurs défauts du rôle, jamais exécuté avant le pipeline et masqué par des `ignore_errors` et un `rescue` : (1) le tier App était déployé avant le tier BDD ; (2) le rôle installait `postgresql@16` alors que `@18` est présent, avec un `initdb` dans un répertoire que `brew services` n'utilise pas ; (3) `postgresql_query` exige `psycopg2`, absent d'Ansible ; (4) la table `items` n'était créée nulle part ; (5) la production visait le port 5433, pris par un tunnel SSH ; (6) `{{ .Names }}` du format Docker était interprété par Jinja.
+- **Correctif** : BDD déployée avant l'app ; cluster Homebrew `postgresql@18` (variable `tier_db_formula`) démarré s'il est absent ; rôle, base et table `items` créés par `psql`, idempotents ; plus d'`ignore_errors` ; la validation échoue réellement. Intégration et production partagent le cluster (port 5432, localhost seulement, atteint depuis Colima par `host.docker.internal`), isolées par base et rôle. Vérifier : `curl localhost:8070/health` puis `POST /items`.
+- **Limite connue** : le `pg_hba.conf` par défaut de Homebrew est en `trust` sur localhost, donc le mot de passe n'est pas exigé pour un processus local.
+- **Origine** : run 37357901616 ; même famille que KB-005 et KB-006 (erreurs masquées).
+- **ITSM** : INC-2026-0003 (ouvert automatiquement par le pipeline).

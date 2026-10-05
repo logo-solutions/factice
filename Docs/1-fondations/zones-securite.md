@@ -24,7 +24,7 @@ Vue d'ensemble des zones et de leurs frontières. Le détail des mesures (pare-f
 |---|---|---|
 | Port Caddy | 8070 | 9080 |
 | Port App | 3000 | 3001 |
-| PostgreSQL | 5432, `factice_integration` | 5433, `factice_production` |
+| PostgreSQL | 5432, `factice_integration` | 5432 (même cluster), `factice_production` |
 | Déclenchement | automatique | manuel, environnement protégé |
 
 ## Accès d'administration

@@ -20,30 +20,25 @@
 
         - name: Verify application container is running
           shell: |
-            docker ps --filter "name={{ tier_app_container_name }}" --format "{{ .Names }}"
+            docker ps --filter "name=^{{ tier_app_container_name }}$" --format '{% raw %}{{ .Names }}{% endraw %}'
+          environment:
+            DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
           register: app_container_check
-          ignore_errors: true
+          changed_when: false
 
       when: tier_app_enabled | bool
 
     - name: Validate Tier 1 - Database
       block:
         - name: Test database connection
-          postgresql_query:
-            db: "{{ tier_db_name }}"
-            login_user: "{{ tier_db_user }}"
-            login_password: "{{ tier_db_password }}"
-            login_host: "{{ tier_db_host }}"
-            port: "{{ tier_db_port }}"
-            query: "SELECT 1;"
+          ansible.builtin.shell: >
+            {{ tier_db_bin }}/psql -h {{ tier_db_host }} -p {{ tier_db_port }} -U {{ tier_db_user }}
+            -d {{ tier_db_name }} -tA -c "SELECT 1"
+          environment:
+            PGPASSWORD: "{{ tier_db_password }}"
           register: db_health
-          ignore_errors: true
-
-        - name: Check database disk usage
-          shell: |
-            du -sh {{ tier_db_data_dir }} 2>/dev/null || echo "N/A"
-          register: db_size
-          ignore_errors: true
+          changed_when: false
+          no_log: true
 
       when: tier_db_enabled | bool
 
@@ -81,7 +76,6 @@
           db_tier:
             enabled: "{{ tier_db_enabled }}"
             status: "{{ 'PASS' if db_health is succeeded else 'FAIL' }}"
-            size: "{{ db_size.stdout if db_size.stdout else 'N/A' }}"
           web_tier:
             enabled: "{{ tier_web_enabled }}"
             caddy_listener: "{{ 'OK' if caddy_listen is succeeded else 'FAILED' }}"
@@ -99,13 +93,20 @@
 
           Database Tier (Enabled: {{ validation_results.db_tier.enabled }})
             Status: {{ validation_results.db_tier.status }}
-            Size: {{ validation_results.db_tier.size }}
 
           Web Tier (Enabled: {{ validation_results.web_tier.enabled }})
             Listener: {{ validation_results.web_tier.caddy_listener }}
             Reverse Proxy: {{ validation_results.web_tier.reverse_proxy }}
 
           Overall Status: {{ "ALL SYSTEMS GO" if (validation_results.app_tier.status == 'PASS' and validation_results.db_tier.status == 'PASS') else "CHECK LOGS" }}
+
+    - name: Fail unless every enabled tier passed
+      ansible.builtin.assert:
+        that:
+          - not tier_app_enabled or app_container_check.stdout | length > 0
+          - not tier_db_enabled or db_health is succeeded
+          - not tier_web_enabled or (caddy_listen is succeeded and caddy_proxy is succeeded)
+        fail_msg: "Validation en échec : {{ validation_results }}"
 
   rescue:
     - name: Log validation failure
@@ -120,3 +121,7 @@
           2. Check PostgreSQL: brew services list
           3. Check Caddy: launchctl list | grep caddy
           4. Check health: curl http://localhost:{{ tier_app_port_http }}/health
+
+    - name: Propagate validation failure
+      ansible.builtin.fail:
+        msg: "La validation du déploiement a échoué (voir ci-dessus)"
