@@ -38,3 +38,11 @@ Format : `KB-NNN`, titre, date, composant.
 - **Cause** : aucun runner enregistré sur le dépôt (`gh api repos/logo-solutions/factice/actions/runners` renvoie 0). Les jobs demandent `runs-on: self-hosted`.
 - **Correctif** : installer le runner (`~/actions-runner-factice`, service launchd). À la reprise, il traite d'abord les runs les plus anciens : annuler ceux qui sont périmés (`gh run cancel <id>`) pour ne pas déployer d'anciennes versions.
 - **Sécurité** : le dépôt est public. Règle « approbation requise pour tous les contributeurs externes » activée (`fork-pr-contributor-approval`), pour qu'un fork ne puisse pas exécuter de code sur le Mac Mini sans accord.
+
+## KB-005 · deploy_stack : « network factice-network declared as external, but could not be found »
+
+- **Date** : 2026-10-05 · **Composant** : Ansible, rôle `deploy_stack`
+- **Symptôme** : `Start Docker Compose stack` échoue avec `network factice-network declared as external, but could not be found`, juste après une tâche `Create Docker network` qui affiche `Connection refused` puis `...ignoring`.
+- **Cause** : `docker_network` n'avait pas `docker_host`, donc visait le Docker Desktop arrêté ; l'échec était masqué par `ignore_errors: true`. Le réseau n'a jamais été créé dans Colima.
+- **Correctif** : `docker_host` sur `docker_network`, `DOCKER_HOST` sur les tâches `shell` Docker, `ignore_errors` retiré (la tâche est idempotente). Règle : tout module ou commande Docker d'un rôle reçoit `docker_host`. Vérifier : `DOCKER_HOST=unix://$HOME/.colima/default/docker.sock docker network ls | grep factice`.
+- **Origine** : run 37356475601 ; même famille que KB-002.

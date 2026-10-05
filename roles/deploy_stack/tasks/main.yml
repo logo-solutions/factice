@@ -18,10 +18,12 @@
     name: "{{ docker_network }}"
     driver: "{{ docker_network_driver }}"
     state: present
-  ignore_errors: true  # Network may already exist
+    docker_host: "{{ docker_host | default(omit) }}"
 
 - name: Prune unused Docker resources
   shell: docker system prune -f
+  environment:
+    DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   when: prune_on_deploy | bool
 
 - name: Start Docker Compose stack
@@ -57,6 +59,8 @@
     - name: Run container health checks via Docker
       shell: |
         docker compose -f {{ compose_file }} ps | grep -E '(Up|healthy)'
+      environment:
+        DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
       register: compose_health
       retries: "{{ healthcheck_retries }}"
       delay: 2
