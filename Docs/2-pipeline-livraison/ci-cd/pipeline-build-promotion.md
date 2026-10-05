@@ -26,7 +26,7 @@ sequenceDiagram
     NR-->>R: empreinte de l'image
     GH->>R: job deploy-integration
     R->>H: ansible-playbook, image tirée par empreinte (svc-deploiement)
-    R->>H: contrôle de santé :8080/health
+    R->>H: contrôle de santé :8070/health
     Dev->>GH: déclenchement manuel, deploy_env = production
     GH->>R: jobs build, promote puis deploy-production (environnement protégé)
     R->>H: ansible-playbook, empreinte promue par cette exécution
@@ -39,7 +39,7 @@ sequenceDiagram
 |---|---|---|---|
 | `build` | push ou demande de fusion sur `main` | `svc-build-factice-app` | tests bloquants, construction de l'image, SBOM ; publication dans `docker-candidat` sauf sur une demande de fusion |
 | `promote` | push sur `main` uniquement | `svc-promotion` | contrôles puis republication dans `docker-release` avec le manifeste et le SBOM |
-| `deploy-integration` | push sur `main`, ou déclenchement manuel | `svc-deploiement` (lecture seule) | déploiement de la release par empreinte, contrôle de santé sur le port 8080, événement de déploiement |
+| `deploy-integration` | push sur `main`, ou déclenchement manuel | `svc-deploiement` (lecture seule) | déploiement de la release par empreinte, contrôle de santé sur le port 8070, événement de déploiement |
 | `deploy-production` | déclenchement manuel (`deploy_env = production`) | `svc-deploiement` (lecture seule) | même déploiement sur le port 9080, environnement `production` ; dépend de `build` et `promote` |
 
 Les comptes sont cloisonnés : celui qui construit ne peut pas écrire en release, celui qui déploie ne fait que lire.
@@ -103,7 +103,7 @@ L'image est tirée par empreinte : ce qui tourne est exactement ce qui a été p
 
 | Environnement | Intégration | Production |
 |---|---|---|
-| **Port HTTP** | 8080 | 9080 |
+| **Port HTTP** | 8070 | 9080 |
 | **Base de données** | 5432 | 5433 |
 | **Déploiement** | Automatique à chaque poussée sur `main` | Manuel via `workflow_dispatch` |
 | **Rôle** | Validation rapide du candidat en conditions réalistes | Décision humaine, avant mise en service réelle |

@@ -19,7 +19,7 @@ Ce document décrit l'isolation **réelle** de factice, puis l'écart avec la ci
 
 | Élément | Intégration | Production | Écoute réelle |
 |---|---|---|---|
-| Caddy | 8080 | 9080 | `http://:PORT` : **toutes les interfaces** de l'hôte |
+| Caddy | 8070 | 9080 | `http://:PORT` : **toutes les interfaces** de l'hôte |
 | Conteneur App | 3000 | 3001 | `"PORT_HÔTE:PORT_INTERNE"` dans le fichier Compose : **toutes les interfaces**, sans liaison à `127.0.0.1` |
 | PostgreSQL natif | 5432 | 5433 | configuration par défaut de l'installation |
 | Interface d'administration Caddy | — | — | désactivée |
@@ -48,7 +48,7 @@ Sur macOS, le filtrage s'appuie sur le pare-feu applicatif et sur `pf`, pas sur 
 
 | Flux à autoriser | Source | Destination |
 |---|---|---|
-| HTTP vers l'application | réseau d'administration | ports Caddy 8080 et 9080 |
+| HTTP vers l'application | réseau d'administration | ports Caddy 8070 et 9080 |
 | SSH d'administration | réseau d'administration | port 22 |
 | Tout le reste en entrée | — | refusé |
 

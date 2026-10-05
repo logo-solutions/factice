@@ -12,7 +12,7 @@
   post_tasks:
     - name: Verify integration stack
       uri:
-        url: "http://localhost:8080/health"
+        url: "http://localhost:8070/health"
         status_code: 200
       retries: 5
       delay: 5
@@ -21,6 +21,6 @@
       debug:
         msg: |
           ✅ Factice INTEGRATION deployed:
-          - Web:   http://localhost:8080
-          - API:   http://localhost:8080/items
+          - Web:   http://localhost:8070
+          - API:   http://localhost:8070/items
           - DB:    localhost:5432/factice_integration

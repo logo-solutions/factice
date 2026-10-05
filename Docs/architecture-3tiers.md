@@ -18,7 +18,7 @@ Une seule instance par tier et par environnement. Pas de haute disponibilité : 
 flowchart TD
     C[Client HTTP] --> W
     subgraph hôte [Hôte macOS]
-        W["Tier Web<br/>Caddy natif (LaunchAgent)<br/>:8080 intégration, :9080 production"]
+        W["Tier Web<br/>Caddy natif (LaunchAgent)<br/>:8070 intégration, :9080 production"]
         A["Tier App<br/>conteneur Node.js<br/>:3000 intégration, :3001 production"]
         D["Tier BDD<br/>PostgreSQL 16 natif<br/>:5432 intégration, :5433 production"]
         W -->|reverse proxy| A
@@ -64,7 +64,7 @@ API applicative de l'exemple :
 
 | | Intégration | Production |
 |---|---|---|
-| Web (Caddy) | 8080 | 9080 |
+| Web (Caddy) | 8070 | 9080 |
 | App (hôte → conteneur) | 3000 → 3000 | 3001 → 3000 |
 | BDD | 5432 | 5433 |
 | Base et utilisateur | `factice_integration` | `factice_production` |
@@ -107,4 +107,4 @@ Les valeurs propres à chaque environnement (ports, noms de base, niveau de jour
 
 - **Redémarrage de la machine** : le LaunchAgent relance le tier Web, `brew services` relance PostgreSQL, la politique `unless-stopped` relance le conteneur.
 - **Idempotence** : un second passage d'un playbook doit rendre `changed=0`. Les gabarits ne changent rien s'ils sont identiques, `docker compose up -d` ne recrée un conteneur que si son image ou sa configuration change, et la création de la base est conditionnelle.
-- **Vérification** : `curl http://localhost:8080/health` renvoie 200 uniquement si les trois tiers répondent.
+- **Vérification** : `curl http://localhost:8070/health` renvoie 200 uniquement si les trois tiers répondent.

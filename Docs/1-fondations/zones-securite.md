@@ -9,7 +9,7 @@ Vue d'ensemble des zones et de leurs frontières. Le détail des mesures (pare-f
 | **Internet** | GitHub | non maîtrisée | aucune vers l'hôte : le runner appelle GitHub en sortie |
 | **Registry** | Nexus | maîtrisée, réseau privé | comptes de service cloisonnés (`svc-build-factice-app`, `svc-promotion`, `svc-deploiement`) |
 | **Administration** | opérateurs, SSH | semi-confiance | clé SSH, comptes nominatifs |
-| **Hôte** | runner, Ansible, Caddy, conteneur App, PostgreSQL | maîtrisée | Caddy `:8080` et `:9080` uniquement |
+| **Hôte** | runner, Ansible, Caddy, conteneur App, PostgreSQL | maîtrisée | Caddy `:8070` et `:9080` uniquement |
 
 ## Frontières de confiance
 
@@ -22,7 +22,7 @@ Vue d'ensemble des zones et de leurs frontières. Le détail des mesures (pare-f
 
 | Élément | Intégration | Production |
 |---|---|---|
-| Port Caddy | 8080 | 9080 |
+| Port Caddy | 8070 | 9080 |
 | Port App | 3000 | 3001 |
 | PostgreSQL | 5432, `factice_integration` | 5433, `factice_production` |
 | Déclenchement | automatique | manuel, environnement protégé |

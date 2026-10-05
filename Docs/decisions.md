@@ -112,7 +112,7 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 
 ## 8. Deux environnements, deux ports
 
-**Décision** : le reverse proxy écoute sur 8080 en intégration et sur 9080 en production.
+**Décision** : le reverse proxy écoute sur 8070 en intégration et sur 9080 en production. Le port 8080, retenu au départ, est déjà pris sur le Mac Mini (cAdvisor et un tunnel SSH).
 
 **Raisons**
 - Éviter les ports privilégiés sur macOS : le port 80 exige les droits administrateur, ce qui complique Homebrew et le LaunchAgent.
@@ -120,7 +120,7 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 
 **Alternative écartée** : le port 80. Il est réaliste en production, mais alourdit le déploiement local.
 
-**Conclusion** : 8080 pour l'intégration, 9080 pour la production.
+**Conclusion** : 8070 pour l'intégration, 9080 pour la production. Vérifier qu'un port est libre (`lsof -nP -iTCP:<port> -sTCP:LISTEN`) avant d'en attribuer un.
 
 ---
 

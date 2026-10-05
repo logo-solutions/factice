@@ -83,10 +83,10 @@ Exécuter tous les 3 mois :
 
 ```bash
 # Requêtes GET /items (lecture)
-ab -n 10000 -c 50 http://localhost:8080/items
+ab -n 10000 -c 50 http://localhost:8070/items
 
 # Requêtes POST /items (écriture)
-echo "POST http://localhost:8080/items" | vegeta attack -duration=60s -rate=100 | vegeta report
+echo "POST http://localhost:8070/items" | vegeta attack -duration=60s -rate=100 | vegeta report
 ```
 
 Documenter :

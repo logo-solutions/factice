@@ -141,7 +141,7 @@ jobs:
             -e "factice_release_image=${NEXUS_DOCKER_RELEASE}/${APP_ID}/${COMPONENT}@${{ needs.promote.outputs.digest }}"
 
       - name: Verify integration health
-        run: curl -f http://localhost:8080/health
+        run: curl -f http://localhost:8070/health
 
       - name: Deployment event
         if: always()
@@ -159,7 +159,7 @@ jobs:
           CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           DIGEST: ${{ needs.promote.outputs.digest }}
         run: |
-          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 8080 "$DIGEST" integration)"
+          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 8070 "$DIGEST" integration)"
           echo "ci=${CI_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Clore le changement ITSM

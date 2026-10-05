@@ -48,7 +48,7 @@ La promotion est **automatique** sur `main` : la décision humaine intervient av
 | Runner | GitHub | HTTPS (sortant) | récupération des jobs, du code, retour des statuts |
 | Runner | Nexus | HTTP(S) selon `NEXUS_URL` | publication candidat, promotion, tirage par empreinte |
 | Ansible | Hôte | local | déploiement, sans SSH distant |
-| Client | Caddy | HTTP | `:8080` intégration, `:9080` production |
+| Client | Caddy | HTTP | `:8070` intégration, `:9080` production |
 | Caddy | Conteneur App | HTTP, local | reverse proxy (`:3000` intégration, `:3001` production) |
 | Conteneur App | PostgreSQL | TCP, local | `:5432` intégration, `:5433` production |
 | Runner | Caddy | HTTP, local | contrôle de santé `/health` après déploiement |
@@ -60,7 +60,7 @@ La promotion est **automatique** sur `main` : la décision humaine intervient av
 |---|---|---|
 | Déclenchement | automatique après promotion | manuel, environnement GitHub protégé |
 | Image | release promue, tirée par empreinte | idem |
-| Ports | Caddy 8080, App 3000, BDD 5432 | Caddy 9080, App 3001, BDD 5433 |
+| Ports | Caddy 8070, App 3000, BDD 5432 | Caddy 9080, App 3001, BDD 5433 |
 | Données | base et utilisateur `factice_integration` | base et utilisateur `factice_production` |
 
 Les deux environnements coexistent sur le même hôte : ports, bases, utilisateurs, répertoires et secrets sont distincts.

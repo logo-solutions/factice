@@ -69,7 +69,7 @@ factice/
 | | Intégration | Production |
 |---|---|---|
 | Déclenchement | Automatique à chaque push sur `main` | Manuel (`workflow_dispatch`), environnement GitHub protégé |
-| Santé | `http://localhost:8080/health` | `http://localhost:9080/health` |
+| Santé | `http://localhost:8070/health` | `http://localhost:9080/health` |
 | Conteneur applicatif | port 3000 | port 3001 |
 | PostgreSQL | port 5432, base et utilisateur `factice_integration` | port 5433, base et utilisateur `factice_production` |
 
@@ -118,7 +118,7 @@ ansible-playbook provision-nexus.yml \
 
 ```bash
 ansible-playbook deploy-factice-integration.yml --vault-password-file ~/.factice-vault-pass
-curl http://localhost:8080/health
+curl http://localhost:8070/health
 
 ansible-playbook deploy-factice-production.yml --vault-password-file ~/.factice-vault-pass
 curl http://localhost:9080/health
@@ -142,7 +142,7 @@ La recette joue le cycle complet (publication, promotion) puis contrôle R1, R2,
 | AC1 | Nexus conforme, dépôts créés | `provision-nexus.yml` : `changed=0` au second passage, « Instance conforme » |
 | AC2 | Recette Nexus | `scripts/nexus/recette.sh` : tous les contrôles PASS |
 | AC3 | Runner enregistré | GitHub, Settings, Actions, Runners |
-| AC4 | Intégration disponible | `curl http://localhost:8080/health` renvoie 200 |
+| AC4 | Intégration disponible | `curl http://localhost:8070/health` renvoie 200 |
 | AC5 | Production disponible | `curl http://localhost:9080/health` renvoie 200 |
 | AC6 | CI/CD fonctionnelle | Push sur `main` : build, candidat, promotion, release, déploiement |
 | AC7 | API `/items` | GET et POST renvoient du JSON |

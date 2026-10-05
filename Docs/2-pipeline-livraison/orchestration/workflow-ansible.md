@@ -82,7 +82,7 @@ Les valeurs propres à un environnement (ports, répertoires, noms de base, éti
 | | Intégration | Production |
 |---|---|---|
 | Répertoire | `~/factice/integration` | `~/factice/production` |
-| Web | 8080 | 9080 |
+| Web | 8070 | 9080 |
 | App | 3000 | 3001 |
 | BDD | 5432 | 5433 |
 | LaunchAgent | `com.factice.web.integration` | `com.factice.web.production` |
@@ -101,7 +101,7 @@ Rôle générique, sans gabarit propre : l'appelant fournit `docker-compose.yml`
 |---|---|---|---|
 | **BDD** | `SELECT 1` via psql (Ansible `postgresql_query`) | 10 | PostgreSQL répond → base accessible |
 | **App** | GET `http://localhost:3000/health` ou `:3001/health` | 30 | Conteneur Docker répond, applicatif sain |
-| **Web** | 1. Écoute du port (8080 ou 9080) → launchctl load réussi<br/>2. GET `/health` via proxy (Caddy → App) | 5 chacun | Caddy démarre → proxy atteint l'App → tous les trois tiers up |
+| **Web** | 1. Écoute du port (8070 ou 9080) → launchctl load réussi<br/>2. GET `/health` via proxy (Caddy → App) | 5 chacun | Caddy démarre → proxy atteint l'App → tous les trois tiers up |
 
 **Chaîne de validation :**
 1. BDD up (base accessible) → l'App peut démarrer
@@ -188,7 +188,7 @@ Les trois tiers ne se comportent pas comme sur un serveur Linux :
 | Symptôme | Piste |
 |---|---|
 | Tirage de l'image refusé (401) | `NEXUS_DEPLOY_PASSWORD` absent ou compte `svc-deploiement` mal configuré |
-| 502 sur le port 8080 ou 9080 | conteneur applicatif arrêté : `docker logs <conteneur>` |
+| 502 sur le port 8070 ou 9080 | conteneur applicatif arrêté : `docker logs <conteneur>` |
 | Conteneur sain mais base inaccessible | PostgreSQL arrêté (`brew services list`) ou port de l'environnement incorrect |
 | Caddy ne démarre pas | `caddy validate --config <répertoire>/Caddyfile`, journaux dans `<répertoire>/logs` |
 | Runner hors ligne | Settings, Actions, Runners ; `launchctl list` sur l'hôte |
