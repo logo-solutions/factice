@@ -1,0 +1,91 @@
+# CMDB NetBox pour l'écosystème (flux 10 : Ansible -> CMDB, flux 12 : CMDB -> ITSM).
+# Secrets requis (voir README) : NETBOX_SECRET_KEY, NETBOX_DB_PASSWORD,
+# NETBOX_REDIS_PASSWORD, NETBOX_SUPERUSER_PASSWORD, NETBOX_API_TOKEN.
+x-netbox-env: &netbox-env
+  DB_HOST: postgres
+  DB_NAME: netbox
+  DB_USER: netbox
+  DB_PASSWORD: ${NETBOX_DB_PASSWORD:?définir NETBOX_DB_PASSWORD (voir README)}
+  REDIS_HOST: redis
+  REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD:?définir NETBOX_REDIS_PASSWORD}
+  REDIS_CACHE_HOST: redis
+  REDIS_CACHE_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+  SECRET_KEY: ${NETBOX_SECRET_KEY:?définir NETBOX_SECRET_KEY}
+  ALLOWED_HOST: "*"
+  CORS_ORIGIN_ALLOW_ALL: "false"
+
+services:
+  netbox:
+    image: netboxcommunity/netbox:v4.4
+    container_name: factice-netbox
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      <<: *netbox-env
+      SUPERUSER_NAME: admin
+      SUPERUSER_EMAIL: admin@example.invalid
+      SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:?définir NETBOX_SUPERUSER_PASSWORD}
+      SUPERUSER_API_TOKEN: ${NETBOX_API_TOKEN:?définir NETBOX_API_TOKEN (40 caractères)}
+    ports:
+      - "127.0.0.1:8096:8080"
+    volumes:
+      - netbox-media:/opt/netbox/netbox/media
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+      retries: 5
+
+  netbox-worker:
+    image: netboxcommunity/netbox:v4.4
+    container_name: factice-netbox-worker
+    restart: unless-stopped
+    depends_on:
+      netbox:
+        condition: service_healthy
+    environment:
+      <<: *netbox-env
+    command: ["/opt/netbox/venv/bin/python", "/opt/netbox/netbox/manage.py", "rqworker"]
+    volumes:
+      - netbox-media:/opt/netbox/netbox/media
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: factice-netbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: netbox
+      POSTGRES_USER: netbox
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD}
+    volumes:
+      - netbox-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netbox -d netbox"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: valkey/valkey:8-alpine
+    container_name: factice-netbox-redis
+    restart: unless-stopped
+    command: ["sh", "-c", "valkey-server --appendonly yes --requirepass \"$$REDIS_PASSWORD\""]
+    environment:
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD}
+    volumes:
+      - netbox-redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "valkey-cli -a \"$$REDIS_PASSWORD\" --no-auth-warning ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  netbox-media:
+  netbox-pgdata:
+  netbox-redisdata:

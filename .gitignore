@@ -11,4 +11,6 @@ build/
 # Secrets générés par le rôle nexus
 .secrets/
 deploy-events.jsonl
+# Données du faux ITSM
+itsm-mock/data/
 nexus-admin.yml

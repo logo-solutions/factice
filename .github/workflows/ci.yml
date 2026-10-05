@@ -6,6 +6,12 @@ name: CI/CD
 #   deploy-* -> déploiement d'une release par empreinte (compte en lecture seule)
 # Variables du dépôt : NEXUS_URL, NEXUS_DOCKER_CANDIDAT, NEXUS_DOCKER_RELEASE
 # Secrets : NEXUS_BUILD_PASSWORD, NEXUS_PROMOTION_PASSWORD, NEXUS_DEPLOY_PASSWORD
+# Contrat ITSM et CMDB : Docs/1-fondations/flux-outils-factice.md (flux 2, 10, 11, 12).
+#   integration -> changement standard créé par le pipeline (trace), puis lié et clos
+#   production  -> changement normal : approuvé par un humain dans l'ITSM avant le déploiement
+#   après chaque déploiement réussi : inventaire écrit dans la CMDB (flux 10)
+# Secrets supplémentaires : ITSM_TOKEN (droits read, create, link, close), CMDB_TOKEN.
+# Variables facultatives : ITSM_URL, CMDB_URL (défauts : services locaux du Mac Mini).
 # Aucun secret n'est passé en argument de commande.
 
 on:
@@ -24,6 +30,11 @@ on:
           - none
           - integration
           - production
+      change_id:
+        description: 'Production : identifiant du changement ITSM approuvé (vide = en créer un)'
+        required: false
+        default: ''
+        type: string
 
 env:
   APP_ID: factice.app
@@ -31,6 +42,8 @@ env:
   NEXUS_URL: ${{ vars.NEXUS_URL }}
   NEXUS_DOCKER_CANDIDAT: ${{ vars.NEXUS_DOCKER_CANDIDAT }}
   NEXUS_DOCKER_RELEASE: ${{ vars.NEXUS_DOCKER_RELEASE }}
+  ITSM_URL: ${{ vars.ITSM_URL || 'http://127.0.0.1:8095' }}
+  CMDB_URL: ${{ vars.CMDB_URL || 'http://127.0.0.1:8096' }}
 
 jobs:
   build:
@@ -107,6 +120,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Trace ITSM (changement standard pré-approuvé)
+        id: change
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          VERSION: ${{ needs.build.outputs.version }}
+        run: |
+          ID="$(scripts/itsm/itsm.sh create standard \
+            "Déploiement factice ${VERSION} en integration" \
+            "Release ${{ needs.promote.outputs.digest }}, commit ${{ github.sha }}" integration)"
+          echo "id=${ID}" >> "$GITHUB_OUTPUT"
+
       - name: Deploy release to integration
         id: deploy
         env:
@@ -126,12 +150,60 @@ jobs:
           DIGEST: ${{ needs.promote.outputs.digest }}
           ENVIRONMENT: integration
           RESULT: ${{ job.status == 'success' && 'reussi' || 'echoue' }}
-          CMDB_EVENT_URL: ${{ vars.CMDB_EVENT_URL }}
-          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
         run: scripts/nexus/deployment-event.sh
 
-  deploy-production:
+      - name: Inventaire CMDB (flux 10)
+        id: cmdb
+        if: success()
+        env:
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+        run: |
+          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 8080 "$DIGEST" integration)"
+          echo "ci=${CI_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Clore le changement ITSM
+        if: always() && steps.change.outputs.id != ''
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          CHANGE_ID: ${{ steps.change.outputs.id }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+          CI_URL: ${{ steps.cmdb.outputs.ci }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT: ${{ job.status == 'success' && 'succes' || 'echec' }}
+        run: |
+          scripts/itsm/itsm.sh link "$CHANGE_ID" "$DIGEST" "$RUN_URL" integration "$CI_URL"
+          scripts/itsm/itsm.sh close "$CHANGE_ID" "$RESULT"
+
+  change-gate:
     needs: [build, promote]
+    runs-on: self-hosted
+    if: github.event.inputs.deploy_env == 'production'
+    outputs:
+      change: ${{ steps.gate.outputs.change }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Exiger un changement approuvé dans l'ITSM (flux 2)
+        id: gate
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          CHANGE_ID: ${{ github.event.inputs.change_id }}
+          VERSION: ${{ needs.build.outputs.version }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+        run: |
+          if [ -z "$CHANGE_ID" ]; then
+            ID="$(scripts/itsm/itsm.sh create normal \
+              "Déploiement factice ${VERSION} en production" \
+              "Release ${DIGEST}, commit ${{ github.sha }}" production)"
+            echo "::error::Changement ${ID} créé en brouillon. Le faire approuver dans l'ITSM, puis relancer avec change_id=${ID}."
+            exit 1
+          fi
+          scripts/itsm/itsm.sh require-approved "$CHANGE_ID"
+          echo "change=${CHANGE_ID}" >> "$GITHUB_OUTPUT"
+
+  deploy-production:
+    needs: [build, promote, change-gate]
     runs-on: self-hosted
     if: github.event.inputs.deploy_env == 'production'
     environment: production
@@ -156,6 +228,27 @@ jobs:
           DIGEST: ${{ needs.promote.outputs.digest }}
           ENVIRONMENT: production
           RESULT: ${{ job.status == 'success' && 'reussi' || 'echoue' }}
-          CMDB_EVENT_URL: ${{ vars.CMDB_EVENT_URL }}
-          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
         run: scripts/nexus/deployment-event.sh
+
+      - name: Inventaire CMDB (flux 10)
+        id: cmdb
+        if: success()
+        env:
+          CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+        run: |
+          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 9080 "$DIGEST" production)"
+          echo "ci=${CI_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Lier et clore le changement ITSM
+        if: always()
+        env:
+          ITSM_TOKEN: ${{ secrets.ITSM_TOKEN }}
+          CHANGE_ID: ${{ needs.change-gate.outputs.change }}
+          DIGEST: ${{ needs.promote.outputs.digest }}
+          CI_URL: ${{ steps.cmdb.outputs.ci }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RESULT: ${{ job.status == 'success' && 'succes' || 'echec' }}
+        run: |
+          scripts/itsm/itsm.sh link "$CHANGE_ID" "$DIGEST" "$RUN_URL" production "$CI_URL"
+          scripts/itsm/itsm.sh close "$CHANGE_ID" "$RESULT"

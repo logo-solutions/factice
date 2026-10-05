@@ -18,6 +18,7 @@
 
 - [flux-et-reseau.md](1-fondations/flux-et-reseau.md) — Flux réels, diagramme avec frontières de confiance
 - [flux-outils.md](1-fondations/flux-outils.md) — Flux cibles entre outils (exigences, ITSM, GitLab, registry, CMDB, documentation), décisions
+- [flux-outils-factice.md](1-fondations/flux-outils-factice.md) — Mise en œuvre dans factice : correspondance des outils, état des flux, cycle d'un déploiement (ITSM, CMDB)
 - [zones-securite.md](1-fondations/zones-securite.md) — Zones, frontières, accès d'administration
 - [modele-menaces.md](1-fondations/modele-menaces.md) — Analyse STRIDE et mesures prioritaires
 
@@ -50,6 +51,7 @@
 - [alertes-et-reactivite.md](3-observabilite/alertes-et-reactivite.md) — Alertes, escalade, runbooks
 - [logs-et-traces.md](3-observabilite/logs-et-traces.md) — Logs structurés, traces distribuées, Loki
 - [apm-et-performance.md](3-observabilite/apm-et-performance.md) — Instrumentation Node.js, profiling, benchmarks
+- [cmdb.md](3-observabilite/cmdb.md) — CMDB NetBox : modèle, adaptateur, rapprochement avec le registry
 
 ### 4️⃣ Sécurité : protéger la chaîne
 

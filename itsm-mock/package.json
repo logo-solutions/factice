@@ -1,0 +1,14 @@
+{
+  "name": "factice-itsm-mock",
+  "version": "0.1.0",
+  "description": "Faux ITSM pour câbler et tester le pipeline factice (changements, incidents)",
+  "private": true,
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

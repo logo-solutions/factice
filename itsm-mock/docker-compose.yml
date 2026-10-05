@@ -1,0 +1,15 @@
+services:
+  itsm-mock:
+    build: .
+    image: factice-itsm-mock:local
+    container_name: factice-itsm-mock
+    restart: unless-stopped
+    environment:
+      ITSM_TOKENS: ${ITSM_TOKENS:?définir ITSM_TOKENS (voir README)}
+    ports:
+      - "127.0.0.1:8095:8095"
+    volumes:
+      - itsm-mock-data:/data
+
+volumes:
+  itsm-mock-data:
