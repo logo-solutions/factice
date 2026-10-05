@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Faux ITSM</title>
+  <link rel="stylesheet" href="/ui.css">
+</head>
+<body>
+  <header>
+    <h1>Faux ITSM</h1>
+    <span class="sub">Changements et incidents, lecture seule</span>
+  </header>
+
+  <main>
+    <form id="connexion" autocomplete="off">
+      <label for="jeton">Jeton (droit « read » requis)</label>
+      <input id="jeton" type="password" required>
+      <button type="submit">Se connecter</button>
+      <button type="button" id="deconnexion" hidden>Se déconnecter</button>
+      <span id="identite"></span>
+    </form>
+    <p id="message" role="status"></p>
+
+    <div id="filtres" hidden>
+      <label>État
+        <select id="f-etat"><option value="">tous</option></select>
+      </label>
+      <label>Type
+        <select id="f-type">
+          <option value="">tous</option>
+          <option>standard</option><option>normal</option><option>incident</option>
+        </select>
+      </label>
+      <button type="button" id="actualiser">Actualiser</button>
+    </div>
+
+    <table id="liste" hidden>
+      <thead>
+        <tr><th>Identifiant</th><th>Type</th><th>État</th><th>Environnement</th><th>Titre</th><th>Demandeur</th><th>Mis à jour</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <section id="detail" hidden></section>
+  </main>
+
+  <script src="/ui.js"></script>
+</body>
+</html>

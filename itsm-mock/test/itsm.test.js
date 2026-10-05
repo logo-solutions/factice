@@ -29,7 +29,7 @@ async function demarrer(dataDir) {
     });
     return { status: res.status, body: await res.json() };
   };
-  return { api, dir, arreter: () => new Promise((r) => server.close(r)) };
+  return { api, base, dir, arreter: () => new Promise((r) => server.close(r)) };
 }
 
 test('santé sans jeton, le reste exige un jeton valide', async () => {
@@ -164,4 +164,19 @@ test('configuration des jetons : refus des entrées invalides', () => {
   assert.throws(() => parseTokens(''), /aucun jeton/);
   assert.throws(() => parseTokens('seul'), /invalide/);
   assert.throws(() => parseTokens('t:u:inconnu'), /droit inconnu/);
+});
+
+test('interface web : pages publiques sans donnée, CSP stricte, données toujours protégées', async () => {
+  const s = await demarrer();
+  for (const [chemin, type] of [['/', 'text/html'], ['/ui.css', 'text/css'], ['/ui.js', 'text/javascript']]) {
+    const res = await fetch(s.base + chemin);
+    assert.equal(res.status, 200);
+    assert.ok(res.headers.get('content-type').startsWith(type));
+    assert.match(res.headers.get('content-security-policy'), /default-src 'none'/);
+    assert.ok((await res.text()).length > 100);
+  }
+  assert.equal((await fetch(s.base + '/ui/../server.js')).status, 401);
+  assert.equal((await fetch(s.base + '/ui.js', { method: 'POST' })).status, 401);
+  assert.equal((await s.api('GET', '/changes')).status, 401);
+  await s.arreter();
 });

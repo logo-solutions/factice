@@ -10,6 +10,12 @@ const path = require('node:path');
 
 const TYPES = ['standard', 'normal', 'incident'];
 const DROITS = ['read', 'create', 'approve', 'link', 'close'];
+const UI_DIR = path.join(__dirname, 'ui');
+const UI_FILES = {
+  '/': ['index.html', 'text/html; charset=utf-8'],
+  '/ui.css': ['ui.css', 'text/css; charset=utf-8'],
+  '/ui.js': ['ui.js', 'text/javascript; charset=utf-8'],
+};
 const MAX_BODY = 64 * 1024;
 const ID_RE = /^(CHG|INC)-\d{4}-\d{4}$/;
 const EMPREINTE_RE = /^[A-Za-z0-9:._-]{7,200}$/;
@@ -84,6 +90,19 @@ function send(res, status, body) {
   res.writeHead(status, {
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(data),
+  });
+  res.end(data);
+}
+
+function sendUi(res, [fichier, type]) {
+  const data = fs.readFileSync(path.join(UI_DIR, fichier));
+  res.writeHead(200, {
+    'Content-Type': type,
+    'Content-Length': data.length,
+    'Cache-Control': 'no-store',
+    'Content-Security-Policy':
+      "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    'X-Content-Type-Options': 'nosniff',
   });
   res.end(data);
 }
@@ -261,6 +280,7 @@ function createServer({ tokens, dataDir, log = () => {} }) {
     try {
       const path = new URL(req.url, 'http://itsm').pathname;
       if (req.method === 'GET' && path === '/health') return send(res, 200, { statut: 'ok' });
+      if (req.method === 'GET' && Object.hasOwn(UI_FILES, path)) return sendUi(res, UI_FILES[path]);
       const who = authenticate(tokens, req.headers.authorization);
       if (!who) throw new HttpError(401, 'jeton absent ou invalide');
       acteur = who.identite;

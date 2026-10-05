@@ -2,6 +2,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 COPY package.json server.js ./
+COPY ui ./ui
 
 ENV ITSM_HOST=0.0.0.0 \
     ITSM_PORT=8095 \

@@ -13,6 +13,7 @@
 
     - name: Authentification au registre des releases
       community.docker.docker_login:
+        docker_host: "{{ docker_host | default(omit) }}"
         registry_url: "{{ factice_release_image.split('/')[0] }}"
         username: "{{ factice_registry_user }}"
         password: "{{ lookup('ansible.builtin.env', 'NEXUS_DEPLOY_PASSWORD') }}"

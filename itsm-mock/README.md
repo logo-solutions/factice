@@ -78,3 +78,7 @@ Puis `link` après le déploiement (empreinte de l'image) et `close` avec le ré
 ## Limites
 
 Pas d'interface web d'approbation (on approuve en ligne de commande ou par API), pas de CMDB (flux 10 et 12 hors périmètre), pas de TLS (à placer derrière Caddy si exposé), pas de multi-instance. Ce n'est pas un ITSM, c'est un double de test du contrat.
+
+## Interface web (lecture seule)
+
+`http://127.0.0.1:8095/` affiche la liste des demandes (filtres état et type) et le détail d'une demande : déploiements avec lien vers le run et l'élément de configuration NetBox, historique. La page elle-même ne contient aucune donnée : elle demande un jeton avec le droit `read`, le garde le temps de l'onglet (`sessionStorage`) et appelle l'API avec. Aucune action possible depuis la page (l'approbation reste `itsm.sh approve`). En-têtes : CSP stricte, pas de script en ligne, aucun contenu rendu en HTML.
