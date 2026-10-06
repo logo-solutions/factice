@@ -70,7 +70,7 @@ factice/
 |---|---|---|
 | Déclenchement | Automatique à chaque push sur `main` | Manuel (`workflow_dispatch`), environnement GitHub protégé |
 | Santé | `http://localhost:8070/health` | `http://localhost:9080/health` |
-| Conteneur applicatif | port 3000 | port 3001 |
+| Conteneur applicatif | port 3000 | port 9001 |
 | PostgreSQL | port 5432, base et utilisateur `factice_integration` | port 5432 (même cluster), base et utilisateur `factice_production` |
 
 Chaque environnement a son propre répertoire d'installation, sa base, son utilisateur de base de données et ses secrets.

@@ -19,7 +19,7 @@ flowchart TD
     C[Client HTTP] --> W
     subgraph hôte [Hôte macOS]
         W["Tier Web<br/>Caddy natif (LaunchAgent)<br/>:8070 intégration, :9080 production"]
-        A["Tier App<br/>conteneur Node.js<br/>:3000 intégration, :3001 production"]
+        A["Tier App<br/>conteneur Node.js<br/>:3000 intégration, :9001 production"]
         D["Tier BDD<br/>PostgreSQL 18 natif<br/>:5432, un cluster, une base par environnement"]
         W -->|reverse proxy| A
         A -->|TCP| D
@@ -65,7 +65,7 @@ API applicative de l'exemple :
 | | Intégration | Production |
 |---|---|---|
 | Web (Caddy) | 8070 | 9080 |
-| App (hôte → conteneur) | 3000 → 3000 | 3001 → 3000 |
+| App (hôte → conteneur) | 3000 → 3000 | 9001 → 3000 |
 | BDD | 5432 | 5432 (même cluster, autre base) |
 | Base et utilisateur | `factice_integration` | `factice_production` |
 

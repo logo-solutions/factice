@@ -19,7 +19,7 @@ tier_app_docker_image: "node:20-alpine"
 factice_release_image: ""
 # Compte de lecture seule sur les releases ; secret fourni par l'environnement.
 factice_registry_user: "svc-deploiement"
-tier_app_port_http: "{{ 3001 if factice_environment == 'production' else 3000 }}"
+tier_app_port_http: "{{ 9001 if factice_environment == 'production' else 3000 }}"
 tier_app_port_internal: 3000
 tier_app_base_dir: "{{ factice_base_dir }}/app"
 tier_app_work_dir: "/app"
