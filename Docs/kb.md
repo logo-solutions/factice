@@ -92,3 +92,13 @@ Décision 14 de [decisions.md](decisions.md).
 - **Correctif** : `change_id is match('^CHG-[0-9]{4}-[0-9]{4}$')`. Règle : tout test d'assertion se valide en exécutant un cas valide et un cas invalide (`ansible-playbook` sur un playbook minimal), pas seulement `--syntax-check`.
 - **Origine** : run 37416691251 ; suite de KB-008. Chaque tentative ratée consomme un changement ITSM (CHG-2026-0014 clos en échec).
 - **ITSM** : INC-2026-0005 (ouvert automatiquement par le pipeline).
+
+## KB-010 · Production : « Bind for 0.0.0.0:3001 failed » — port pris par l'intégration ou un autre processus
+
+- **Date** : 2026-10-06 · **Composant** : Docker, rôle `factice` (tier App, production)
+- **Symptôme** : le déploiement production échoue à la création du conteneur `factice-app` : `driver failed programming external connectivity on endpoint factice-app: Bind for 0.0.0.0:3001 failed`.
+- **Cause** : le port 3001 est déjà pris, vraisemblablement par le conteneur `factice-app` d'intégration (port 3000 en intégration, 3001 en production, même machine Colima). L'isolation par port n'est pas suffisante quand deux environnements tournent sur le même hôte.
+- **Correctif** : avant de déployer en production, arrêter les conteneurs d'intégration (`docker stop factice-app` ou `docker-compose -f /Users/logo/factice/integration/app/docker-compose.yml down`). Règle : deux environnements sur le même Mac Mini doivent avoir des ports distincts (fait) ET une séquence de déploiement qui évite les conflits (à améliorer : actuellement, l'intégration et la production tournent simultanément). Alternative : Ansible met en `pause` pour que l'opérateur arrête l'environnement précédent avant.
+- **Limite** : factice n'isole pas les environnements (pas de VMs, pas de namespaces). Sur une vraie infrastructure, la production est sur une machine différente.
+- **Origine** : run 37417815665.
+- **ITSM** : INC-2026-0006 (ouvert automatiquement par le pipeline).
