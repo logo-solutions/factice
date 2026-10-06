@@ -1,5 +1,9 @@
 name: CI/CD
 
+permissions:
+  contents: read
+  packages: write
+
 # Contrat Nexus : Docs/2-pipeline-livraison/registry/nexus-spec.md, section 8.1.
 #   build    -> publication en candidat (compte de build de l'application)
 #   promote  -> contrôles puis republication en release (compte de promotion)
@@ -126,9 +130,17 @@ jobs:
       - name: Build Docker image
         run: docker build -t "factice:${{ github.sha }}" app
 
+      - name: Push to GHCR (staging)
+        if: github.event_name != 'pull_request'
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+          docker tag factice:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/factice.app/factice:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.build }}
+          docker push ghcr.io/${{ github.repository_owner }}/factice.app/factice:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.build }}
+
       - name: Publish candidate (image + SBOM + manifest)
         if: github.event_name != 'pull_request'
         env:
+          NEXUS_DOCKER_CANDIDAT: ghcr.io/${{ github.repository_owner }}
           NEXUS_USER: svc-build-factice-app
           NEXUS_PASSWORD: ${{ secrets.NEXUS_BUILD_PASSWORD }}
           VERSION: ${{ steps.meta.outputs.version }}
