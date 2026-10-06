@@ -140,6 +140,10 @@ jobs:
       - name: Build Docker image
         run: docker build -t "factice:${{ github.sha }}" app
 
+      - name: Install dependencies (pour SBOM scan)
+        run: npm ci
+        working-directory: app
+
       - name: Publish candidate (image + SBOM + manifest to Nexus localhost:8082)
         env:
           NEXUS_DOCKER_CANDIDAT: localhost:8082
