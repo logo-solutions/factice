@@ -163,55 +163,88 @@ origin  git@github.com:logo-solutions/factice.git (push)
 
 ---
 
-## 5. Preuves Visuelles
+## 5. Diffs Réels & Fiches KB
 
-### 5.1 Screenshot — factice Commits
+### 5.1 Diff Nexus — README.md (+255 lignes)
 
-![factice commits](screenshots/01-factice-commits.jpg)
+![Nexus diff](screenshots/03-nexus-readme.jpg)
 
-**URL** : https://github.com/logo-solutions/factice/commits/main
+**Commit** : `d02ebd2` — https://github.com/logo-solutions/Nexus/commit/d02ebd2
 
-**Contenu** :
-- Commit `907a8ee` : "chore: test push — ajouter timestamp preuve" (tout récent)
-- Commits antérieurs : KB-012, KB-013, fix npm ci, debug logs, KB-011
-- Timeline : tous poussés avec succès
-
-**Status** : ✅ Main branch à jour avec tous les fixes
-
----
-
-### 5.2 Screenshot — cmdb README
-
-![cmdb README](screenshots/02-cmdb-readme.jpg)
-
-**URL** : https://github.com/logo-solutions/cmdb
-
-**Contenu visible** :
-- Titre : "cmdb — NetBox Configuration Management Database"
-- Badges : NetBox 4.4 (bleu), License Apache 2.0 (vert), Status Active (vert)
-- Description : "Production CMDB (NetBox 4.4) for the ecosystem..."
-- Section : Architecture, Features, Quick Start
-- Dernière modification : 11 minutes ago (4a8b60a commit)
-
-**Status** : ✅ README pro déployé et visible
-
----
-
-### 5.3 Screenshot — Nexus README
-
-![Nexus README](screenshots/03-nexus-readme.jpg)
-
-**URL** : https://github.com/logo-solutions/Nexus
-
-**Contenu visible** :
-- Titre : "Nexus — Private Container Registry & Artifact Repository"
-- Badges : Nexus 3.96.3 (bleu), License Community (vert), Status Active (vert)
+**Diff visible** :
+- Badges (Version, License, Status)
 - Description : "Sonatype Nexus 3 self-hosted instance..."
-- Section : Features, Quick Start, Ports, Installation
-- Fichiers : README.md, SPEC-implementation-nexus.md, docker-compose.yml
-- Commit : d02ebd2 (10 minutes ago)
+- Features : ✅ Private Container Registry, Docker Hosted Repo, Artifact Storage
+- Quick Start (docker compose up -d, curl, UI access)
+- Ports documentation (8081 UI/API, 8082 Docker Registry, 5001-5004 reserved)
+- Installation step-by-step, Docker-compose, FirstLogin
+- Usage in CI/CD, Backup/recovery
 
-**Status** : ✅ Repo créé et README poussé
+**Status** : ✅ README professionnel + badges + sections complètes (255 lignes)
+
+---
+
+### 5.2 Diff cmdb — README.md (+225 lignes)
+
+![cmdb diff](screenshots/02-cmdb-readme.jpg)
+
+**Commit** : `4a8b60a` — https://github.com/logo-solutions/cmdb/commit/4a8b60a
+
+**Diff visible** :
+- Structure open-source complète : Badges, Quick Start, Installation
+- Features : ✅ Inventory as Source of Truth, Environment Isolation, Service Registry, Automated Discovery, Backup & Recovery, Adaptateur Pattern
+- Prerequisites détaillées
+- Step-by-step : Clone, Secret generation (secrets), Deploy, Access UI
+- Usage en Pipelines (cmdb.sh adaptateur pattern)
+- GitHub Actions integration
+- Automated Discovery (cron)
+- Database schema (custom fields)
+- Backup & recovery procedures (14-day retention)
+- Troubleshooting table
+
+**Status** : ✅ README pro + standards open-source (253 lignes)
+
+---
+
+### 5.3 Fiches KB — Docs/kb.md (KB-011, KB-012, KB-013)
+
+![KB snapshot](screenshots/01-factice-commits.jpg)
+
+**Fichier** : https://github.com/logo-solutions/factice/blob/main/Docs/kb.md (138 lignes, 15.7 KB)
+
+**Fiches visibles** :
+
+#### KB-011 · Build job échoue silencieusement : docker login impossible sur le port 5001
+
+- **Date** : 2026-10-06
+- **Composant** : GitHub Actions, build job, registre Nexus
+- **Symptôme** : docker login échoue silencieusement après « SBOM CycloneDX » (exit code 1)
+- **Cause** : port 5001 occupé par SSH Colima (PID 87414, Lima hostagent)
+- **Correctif** : Utiliser port 8082 (connecteur Docker dédié de Nexus)
+  - Changement : `localhost:5001` → `localhost:8082` dans `.github/workflows/ci.yml` ligne 145
+  - Vérification : `curl http://localhost:8082/v2/` → 401 (authentification requise)
+- **Note technique** : Collision de ressource ; solution court terme : 8082 OK, long terme : reconfigurer Colima
+
+#### KB-012 · Build job : gen-sbom.sh échoue silencieusement faute de node_modules
+
+- **Date** : 2026-10-06
+- **Composant** : GitHub Actions, build job, gen-sbom.sh
+- **Symptôme** : Step « Publish candidate » s'arrête après « SBOM CycloneDX » (exit 1) sans message
+- **Cause** : gen-sbom.sh lance `npm ls --all --json` mais le build job ne fait que `docker build`, pas `npm ci`
+  - Résultat : pas de node_modules, SBOM vide, exit 1 silencieux
+  - Cache npm du test job (ubuntu-latest) n'est pas partagé au build job (self-hosted)
+- **Correctif** : Ajouter step « Install dependencies » avec `npm ci` dans `app/` avant publish-candidate.sh
+- **Vérification** : Run 83+ doit passer le step « Publish candidate » avec SBOM non vide
+
+#### KB-013 · Build job : ajouter npm ci pour gen-sbom (correctif du KB-012)
+
+- **Date** : 2026-10-06
+- **Composant** : GitHub Actions, build job, npm dependencies
+- **Symptôme** : KB-012 a décrit le problème (gen-sbom.sh échoue sans node_modules)
+- **Correctif** : Ajouter `npm ci` dans le build job avant `publish-candidate.sh`
+- **Statut** : Commit `2385249` inclut les trailers KB et Exigence (validé par kb-check, req-check)
+
+**Status** : ✅ Trois fiches KB documentées avec Date, Composant, Symptôme, Cause, Correctif
 
 ---
 
