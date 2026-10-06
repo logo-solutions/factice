@@ -36,9 +36,13 @@ MANIFEST="${COMPONENT}-${VERSION}.manifest.json"
 
 log "SBOM CycloneDX"
 "$(dirname "$0")/gen-sbom.sh" "$APP_DIR" "$APP_ID" "$COMPONENT" "$VERSION" "$COMMIT" "$WORK/$SBOM"
+log "SBOM généré : $WORK/$SBOM"
+[ -f "$WORK/$SBOM" ] || die "SBOM manquant après gen-sbom.sh"
 
 log "Image vers ${CAND_IMAGE}"
-docker_login "$NEXUS_DOCKER_CANDIDAT"
+log "Authentification Nexus sur $NEXUS_DOCKER_CANDIDAT"
+docker_login "$NEXUS_DOCKER_CANDIDAT" || die "docker login échoué"
+log "Authentification OK"
 docker tag "$IMAGE" "$CAND_IMAGE"
 docker push -q "$CAND_IMAGE" >/dev/null
 DIGEST="$(docker inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$CAND_IMAGE" \
