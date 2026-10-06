@@ -11,7 +11,7 @@
       assert:
         that:
           - change_id is defined
-          - change_id | regex_search('^CHG-[0-9]{4}-[0-9]{4}$')
+          - change_id is match('^CHG-[0-9]{4}-[0-9]{4}$')
         fail_msg: "Production : passer -e change_id=CHG-AAAA-NNNN (changement approuvé dans l'ITSM, vérifié par le job change-gate)"
 
   roles:

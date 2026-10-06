@@ -83,3 +83,12 @@ Décision 14 de [decisions.md](decisions.md).
 - **Correctif** : le `pause` est remplacé par une exigence d'un `change_id` (`-e change_id=CHG-AAAA-NNNN`, transmis par `ci.yml` depuis le job `change-gate`) ; relecteur requis configuré sur l'environnement `production` (`gh api -X PUT repos/<org>/factice/environments/production`). La confirmation humaine passe par l'approbation ITSM puis par celle de l'environnement. `prevent_self_review` reste faux : un seul humain déclenche et approuve. Vérifier : `gh api repos/<org>/factice/environments/production --jq '.protection_rules'`.
 - **Origine** : run 37414908865.
 - **ITSM** : INC-2026-0004 (ouvert automatiquement par le pipeline).
+
+## KB-009 · Ansible : « Conditionals must have a boolean result » (assertion sur regex_search)
+
+- **Date** : 2026-10-06 · **Composant** : playbook `deploy-factice-production.yml`
+- **Symptôme** : `deploy-production` échoue dès la première tâche avec `Conditional result (True) was derived from value of type 'str'`.
+- **Cause** : l'assertion du KB-008 utilisait `change_id | regex_search(...)`, qui renvoie une chaîne et non un booléen ; le correctif n'avait été vérifié qu'en syntaxe, pas exécuté.
+- **Correctif** : `change_id is match('^CHG-[0-9]{4}-[0-9]{4}$')`. Règle : tout test d'assertion se valide en exécutant un cas valide et un cas invalide (`ansible-playbook` sur un playbook minimal), pas seulement `--syntax-check`.
+- **Origine** : run 37416691251 ; suite de KB-008. Chaque tentative ratée consomme un changement ITSM (CHG-2026-0014 clos en échec).
+- **ITSM** : INC-2026-0005 (ouvert automatiquement par le pipeline).
