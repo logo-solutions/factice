@@ -81,7 +81,7 @@ Le workflow de référence est `.github/workflows/ci.yml`, décrit dans [pipelin
 
 - Tests doivent passer avant fusion
 - Déploiement intégration automatique
-- Déploiement production = lancement manuel et approbation de l'environnement GitHub
+- Déploiement production = lancement manuel et changement ITSM approuvé (job `change-gate`)
 
 ### Promotion Nexus
 

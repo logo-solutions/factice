@@ -8,7 +8,7 @@
 |---|---|---|---|
 | Référentiel d'exigences | `Docs/exigences/` dans Git | Référentiel | [exigences/README.md](../exigences/README.md) |
 | ITSM | **Faux ITSM** (service REST local) derrière l'adaptateur `scripts/itsm/itsm.sh` | Référentiel | `itsm-mock/`, port 8095 |
-| GitLab | GitHub (dépôt, environnement protégé `production`) | Référentiel | `logo-solutions/factice` |
+| GitLab | GitHub (dépôt) | Référentiel | `logo-solutions/factice` |
 | Runner | Runner GitHub Actions auto-hébergé sur le Mac Mini | Exécutant | `.github/workflows/ci.yml` |
 | Registry | Nexus (candidat et release) | Référentiel | [registry/](../2-pipeline-livraison/registry/README.md) |
 | Workflows Ansible | Playbooks `deploy-factice-*.yml` | Exécutant | racine du dépôt |
@@ -73,7 +73,7 @@ flowchart LR
 1. Premier lancement, sans `change_id` : le pipeline crée un **changement normal** en brouillon et s'arrête en échec, avec le message « Changement CHG-AAAA-NNNN créé, le faire approuver puis relancer avec change_id ». C'est volontaire : aucun déploiement sans changement.
 2. Un humain **approuve** le changement dans l'ITSM. L'approbateur doit être différent du demandeur (ACC-04) : le demandeur est le compte du pipeline, l'approbateur un compte humain.
 3. Second lancement avec `change_id` : le job `change-gate` vérifie que l'état est `approuve`, puis le job `deploy-production` s'exécute.
-4. Le déploiement est soumis à l'approbation de l'environnement protégé `production` de GitHub. C'est le **blocage technique** ; l'ITSM en garde la trace (décision 1, pas de double approbation).
+4. Le job `deploy-production` ne démarre que si `change-gate` a réussi : c'est le **blocage technique**, et l'approbation ITSM en est l'unique décision humaine (décision 16 : pas de seconde approbation dans GitHub).
 5. Après le déploiement : écriture CMDB, lien et clôture du changement.
 
 Approuver, côté Mac Mini :

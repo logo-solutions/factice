@@ -25,7 +25,7 @@ Vue d'ensemble des zones et de leurs frontières. Le détail des mesures (pare-f
 | Port Caddy | 8070 | 9080 |
 | Port App | 3000 | 3001 |
 | PostgreSQL | 5432, `factice_integration` | 5432 (même cluster), `factice_production` |
-| Déclenchement | automatique | manuel, environnement protégé |
+| Déclenchement | automatique | manuel, changement ITSM approuvé |
 
 ## Accès d'administration
 
@@ -33,7 +33,7 @@ Vue d'ensemble des zones et de leurs frontières. Le détail des mesures (pare-f
 |---|---|
 | Déploiement | pas d'accès distant : le workflow lance Ansible sur le runner, vers l'hôte lui-même |
 | Intervention humaine sur l'hôte | session ou SSH depuis le réseau d'administration ; **aucune règle de pare-feu ni politique d'accès n'est versionnée** |
-| Opérations sensibles (promotion, production) | passent par le workflow ; la production exige l'environnement protégé `production` |
+| Opérations sensibles (promotion, production) | passent par le workflow ; la production exige un changement ITSM approuvé (`change-gate`) |
 
 Les opérations d'administration de la chaîne (workflow, secrets, runner) sont des actions d'administration à part entière : leur accès relève du même niveau de protection que l'accès à l'hôte (authentification forte, comptes nominatifs, journalisation).
 

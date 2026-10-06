@@ -160,7 +160,7 @@ Ces critères traduisent les cibles de [securite-pipeline.md](2-pipeline-livrais
 | AC12 | Analyse statique | `ansible-lint` (profil `production`), `yamllint` et `actionlint` sans erreur |
 | AC13 | Analyse des vulnérabilités | aucune vulnérabilité `CRITICAL` ou `HIGH` corrigeable dans l'image promue |
 | AC14 | Signature vérifiée | `cosign verify` réussi sur l'empreinte avant chaque déploiement |
-| AC15 | Droits minimaux | workflow avec `permissions` explicites ; relecteurs obligatoires sur `production` |
+| AC15 | Droits minimaux | workflow avec `permissions` explicites ; production bloquée par `change-gate` (changement ITSM approuvé) |
 | AC16 | Secrets chiffrés | aucun secret en clair dans le dépôt ; `vault.yml` chiffré |
 | AC17 | Exposition maîtrisée | balayage depuis une autre machine : seuls les ports prévus répondent |
 

@@ -28,7 +28,7 @@ sequenceDiagram
     R->>H: ansible-playbook, image tirée par empreinte (svc-deploiement)
     R->>H: contrôle de santé :8070/health
     Dev->>GH: déclenchement manuel, deploy_env = production
-    GH->>R: jobs build, promote puis deploy-production (environnement protégé)
+    GH->>R: jobs build, promote puis deploy-production (après change-gate)
     R->>H: ansible-playbook, empreinte promue par cette exécution
     R->>H: contrôle de santé :9080/health
 ```
@@ -177,7 +177,7 @@ Aucun secret n'est passé en argument de commande. Le mot de passe du coffre Ans
 |---|---|---|---|
 | Production non indépendante | `deploy-production` a `needs: [build, promote]` | un lancement manuel reconstruit et republie ; la production reçoit l'empreinte de cette exécution, pas celle testée en intégration | déployer en production une empreinte existante, fournie en entrée du workflow, ce qui permet aussi le retour arrière par le workflow |
 | Intégration relancée par un lancement manuel | `deploy-integration` s'exécute dès que la référence est `main` | un lancement manuel destiné à la production redéploie aussi l'intégration | conditionner l'intégration à l'événement `push` ou à `deploy_env = integration` |
-| Confirmation interactive en production | le playbook `deploy-factice-production.yml` contient une tâche `pause` suivie d'un `assert` | sur un runner sans terminal, la confirmation ne peut pas être saisie ; le comportement exact est à vérifier. La confirmation humaine est déjà portée par l'environnement `production` de GitHub | retirer la pause du playbook et garder l'approbation de l'environnement |
+| Confirmation interactive en production | le playbook contenait une tâche `pause` | une saisie clavier est impossible sur un runner (KB-008) | remplacée par l'exigence d'un `change_id` ; la confirmation humaine est l'approbation ITSM (décision 16) |
 | Contrôles de qualité | seul `npm test` est exécuté ; le script `lint` existe mais l'analyseur n'est pas une dépendance du projet | pas de contrôle de style ni de type en CI, contrairement à ce que laisse entendre [trunk-based.md](../../trunk-based.md) | ajouter l'analyseur et l'étape de lint |
 | Sécurité du pipeline | pas de `permissions`, de `concurrency`, de délai maximal, d'analyse ni de signature | voir [securite-pipeline.md](securite-pipeline.md) | plan d'adoption de ce document |
 

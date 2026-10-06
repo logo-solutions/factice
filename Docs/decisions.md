@@ -211,3 +211,14 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 - Les contrôles réutilisent le patron de la décision 14 : un script testable en local, un job qui l'appelle.
 
 **Limite** : le contrôle vérifie qu'une exigence existante est citée, pas qu'elle est pertinente. Le rapport de preuves ne couvre que les tests nommés d'après une exigence.
+
+## 16. L'approbation ITSM est la seule approbation de la production
+
+**Décision** : la production n'exige qu'un changement approuvé dans l'ITSM, vérifié par le job `change-gate`. L'environnement GitHub `production` n'a plus de relecteur requis.
+
+**Raisons**
+- Une seule personne déclenche et approuve : la seconde approbation GitHub était le même « oui » donné deux fois, et contredisait « pas de double approbation » (décision 1).
+- `change-gate` est déjà un blocage technique : sans changement approuvé, `deploy-production` ne démarre pas. L'ITSM porte aussi l'exigence ACC-04 (approbateur différent du demandeur).
+
+**Limite** : le changement n'est pas lié à une empreinte précise avant le déploiement ; avec plusieurs humains, remettre un relecteur d'environnement.
+

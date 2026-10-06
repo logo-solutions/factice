@@ -18,7 +18,7 @@ Le déroulé du pipeline est dans [pipeline-build-promotion.md](pipeline-build-p
 
 | Risque | Situation dans factice | Niveau |
 |---|---|---|
-| CICD-SEC-1 Contrôle de flux insuffisant | Fusion par demande de fusion, contrôle `build` ; production manuelle sur environnement protégé. Pas de relecteur obligatoire configuré sur l'environnement. | partiel |
+| CICD-SEC-1 Contrôle de flux insuffisant | Fusion par demande de fusion, contrôle `build` ; production manuelle, bloquée par `change-gate` (changement ITSM approuvé par un humain distinct du demandeur). Pas de relecteur GitHub (décision 16). | partiel |
 | CICD-SEC-2 Gestion des identités et accès | Trois comptes Nexus cloisonnés. Mots de passe longue durée. | partiel |
 | CICD-SEC-3 Chaîne de dépendances | `npm ci` sur lockfile. Aucun scan des dépendances ni de l'image. Actions épinglées par étiquette. | à traiter |
 | CICD-SEC-4 Exécution de pipeline empoisonné | Runner auto-hébergé exécutant le code des demandes de fusion. | à traiter |
