@@ -167,6 +167,8 @@ origin  git@github.com:logo-solutions/factice.git (push)
 
 ### 5.1 Screenshot — factice Commits
 
+![factice commits](screenshots/01-factice-commits.jpg)
+
 **URL** : https://github.com/logo-solutions/factice/commits/main
 
 **Contenu** :
@@ -179,6 +181,8 @@ origin  git@github.com:logo-solutions/factice.git (push)
 ---
 
 ### 5.2 Screenshot — cmdb README
+
+![cmdb README](screenshots/02-cmdb-readme.jpg)
 
 **URL** : https://github.com/logo-solutions/cmdb
 
@@ -194,6 +198,8 @@ origin  git@github.com:logo-solutions/factice.git (push)
 ---
 
 ### 5.3 Screenshot — Nexus README
+
+![Nexus README](screenshots/03-nexus-readme.jpg)
 
 **URL** : https://github.com/logo-solutions/Nexus
 
