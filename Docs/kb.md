@@ -113,3 +113,24 @@ Décision 14 de [decisions.md](decisions.md).
 - **À vérifier** : après ce fix, relancer le workflow et vérifier que le build job passe.
 
 Note technique : les ports 5001-5004 dans le docker-compose de Nexus existent, mais le tunnel SSH de Colima les capture. C'est une collision de ressource : deux services veulent le même port. Solution long terme : reconfigurer Colima pour libérer 5001-5004, ou assigner un autre range au tunnel SSH.
+
+**Référence Nexus** : 8082 est le « connecteur HTTP dédié au repo Docker hosted » (docker-compose.yml ligne 12). Pour utiliser 5001-5004, il faudrait provisionner des repos Nexus sur ces ports et les configurer dans Ansible (tâche séparate : `roles/nexus`, provisioning API REST).
+
+## KB-012 · Build job : gen-sbom.sh échoue silencieusement faute de node_modules
+
+- **Date** : 2026-10-06 · **Composant** : GitHub Actions, build job, gen-sbom.sh
+- **Symptôme** : le step « Publish candidate » s'arrête après « SBOM CycloneDX » avec exit 1, sans message d'erreur visible. Les logs détaillés auraient montré « SBOM vide : npm ci manquant ? ».
+- **Cause** : le script `gen-sbom.sh` lance `npm ls --all --json` pour scanner les dépendances, mais le build job self-hosted ne faisait que `docker build`, pas `npm ci`. Résultat : pas de `node_modules`, `npm ls` échoue silencieusement (redirected to stderr avec `2>/dev/null`), et le SBOM généré est vide. La ligne 26 du gen-sbom.sh vérifie que le SBOM a au moins des composants, sinon exit 1.
+- **Correctif** : ajouter un step « Install dependencies » dans le build job avec `npm ci` dans `app/` avant d'exécuter `publish-candidate.sh`. Le cache npm (des steps précédents du test job) n'est pas partagé entre jobs ; il faut relancer npm ci dans le build job.
+- **Origine** : run 37513557932 (run 81, première tentative avec logs de debug). Les logs du run 81 auraient révélé le problème, mais ça n'a pas montré l'erreur explicitement.
+- **À vérifier** : run 83+ devraient passer le step « Publish candidate » avec npm ci ajouté.
+
+Note : `gen-sbom.sh` suppose que `app/` a `node_modules/` à jour. C'est une garantie du build job : faire npm ci avant toute dépendance du SBOM.
+
+## KB-013 · Build job : ajouter npm ci pour gen-sbom (correctif du KB-012)
+
+- **Date** : 2026-10-06 · **Composant** : GitHub Actions, build job, npm dependencies
+- **Symptôme** : KB-012 a décrit le problème (gen-sbom.sh échoue sans node_modules). Le correctif est d'ajouter `npm ci` dans le build job avant `publish-candidate.sh`.
+- **Correctif** : step « Install dependencies » ajouté au build job avec `npm ci` dans le répertoire `app/`.
+- **Origine** : commit 2385249 (amendé ac0b9d9, run 83+).
+- **À vérifier** : run 83+ avec le commit 2385249 + fiches KB-012,013 devrait passer le job kb-check et req-check.
