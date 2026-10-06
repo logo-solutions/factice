@@ -54,6 +54,8 @@ env:
   NEXUS_DOCKER_RELEASE: ${{ vars.NEXUS_DOCKER_RELEASE }}
   ITSM_URL: ${{ vars.ITSM_URL || 'http://127.0.0.1:8095' }}
   CMDB_URL: ${{ vars.CMDB_URL || 'http://127.0.0.1:8096' }}
+  # projet cmdb (dépôt logo-solutions/cmdb), cloné sur l'hôte du runner auto-hébergé
+  CMDB_HOME: /Volumes/logousb/SSD/Projects/cmdb
 
 jobs:
   kb-check:
@@ -238,7 +240,7 @@ jobs:
           CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           DIGEST: ${{ needs.promote.outputs.digest }}
         run: |
-          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 8070 "$DIGEST" integration)"
+          CI_URL="$("$CMDB_HOME/bin/cmdb.sh" register-service "$APP_ID" macmini "$COMPONENT" 8070 "$DIGEST" integration)"
           echo "ci=${CI_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Clore le changement ITSM
@@ -261,7 +263,7 @@ jobs:
           CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          CI_URL="$(scripts/cmdb/cmdb.sh ci-url "$APP_ID" "$COMPONENT" integration 2>/dev/null || true)"
+          CI_URL="$("$CMDB_HOME/bin/cmdb.sh" ci-url "$APP_ID" "$COMPONENT" integration 2>/dev/null || true)"
           ID="$(scripts/itsm/itsm.sh create incident \
             "Échec du déploiement factice en integration" \
             "Run ${RUN_URL}, commit ${{ github.sha }}" integration "$CI_URL")" || exit 0
@@ -330,7 +332,7 @@ jobs:
           CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           DIGEST: ${{ needs.promote.outputs.digest }}
         run: |
-          CI_URL="$(scripts/cmdb/cmdb.sh register-service "$APP_ID" macmini "$COMPONENT" 9080 "$DIGEST" production)"
+          CI_URL="$("$CMDB_HOME/bin/cmdb.sh" register-service "$APP_ID" macmini "$COMPONENT" 9080 "$DIGEST" production)"
           echo "ci=${CI_URL}" >> "$GITHUB_OUTPUT"
 
       - name: Lier et clore le changement ITSM
@@ -353,7 +355,7 @@ jobs:
           CMDB_TOKEN: ${{ secrets.CMDB_TOKEN }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          CI_URL="$(scripts/cmdb/cmdb.sh ci-url "$APP_ID" "$COMPONENT" production 2>/dev/null || true)"
+          CI_URL="$("$CMDB_HOME/bin/cmdb.sh" ci-url "$APP_ID" "$COMPONENT" production 2>/dev/null || true)"
           ID="$(scripts/itsm/itsm.sh create incident \
             "Échec du déploiement factice en production" \
             "Run ${RUN_URL}, commit ${{ github.sha }}" production "$CI_URL")" || exit 0
