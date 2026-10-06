@@ -130,14 +130,7 @@ jobs:
       - name: Build Docker image
         run: docker build -t "factice:${{ github.sha }}" app
 
-      - name: Push to GHCR (staging)
-        if: github.event_name != 'pull_request'
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker tag factice:${{ github.sha }} ghcr.io/${{ github.repository_owner }}/factice.app/factice:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.build }}
-          docker push ghcr.io/${{ github.repository_owner }}/factice.app/factice:${{ steps.meta.outputs.version }}-${{ steps.meta.outputs.build }}
-
-      - name: Publish candidate (image + SBOM + manifest)
+      - name: Publish candidate (image + SBOM + manifest via GHCR staging)
         if: github.event_name != 'pull_request'
         env:
           NEXUS_DOCKER_CANDIDAT: ghcr.io/${{ github.repository_owner }}
@@ -148,7 +141,9 @@ jobs:
           COMMIT: ${{ github.sha }}
           IMAGE: factice:${{ github.sha }}
           APP_DIR: app
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           COMMIT_DATE="$(git log -1 --format=%cI)" scripts/nexus/publish-candidate.sh
 
   promote:
