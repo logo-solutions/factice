@@ -102,3 +102,14 @@ Décision 14 de [decisions.md](decisions.md).
 - **Limite** : factice n'isole pas les environnements (pas de VMs, pas de namespaces). Sur une vraie infrastructure, la production est sur une machine différente.
 - **Origine** : run 37417815665.
 - **ITSM** : INC-2026-0006 (ouvert automatiquement par le pipeline).
+
+## KB-011 · Build job échoue silencieusement : docker login impossible sur le port 5001
+
+- **Date** : 2026-10-06 · **Composant** : GitHub Actions, build job, registre Nexus
+- **Symptôme** : la commande `docker_login "$NEXUS_DOCKER_CANDIDAT"` du script `publish-candidate.sh` échoue silencieusement après l'étape « SBOM CycloneDX », sans message d'erreur visible. Le job s'arrête avec « Process completed with exit code 1 ».
+- **Cause** : le port 5001 attendu (configuré dans le workflow) est occupé par le multiplexeur SSH de Colima (VM daemon). `lsof -nP -iTCP:5001` révèle un processus `ssh` (PID 87414, Lima hostagent). Le registre Nexus écoute bien sur 5001-5004 (dans le docker-compose), mais ils sont masqués.
+- **Correctif** : le port Docker de Nexus est 8082 (connecteur HTTP dédié au repo Docker hosted, dockerfile ligne 12). Changer `NEXUS_DOCKER_CANDIDAT=localhost:5001` en `localhost:8082` dans `.github/workflows/ci.yml` ligne 145. Attente : `docker login localhost:8082` doit fonctionner. Vérifier : `curl http://localhost:8082/v2/` → 401 (attendu, auth requise).
+- **Origine** : run 37512397300 (build ❌, logs montrent exit 1 sans contexte). Découverte : `lsof` et `docker ps` sur le Mac Mini.
+- **À vérifier** : après ce fix, relancer le workflow et vérifier que le build job passe.
+
+Note technique : les ports 5001-5004 dans le docker-compose de Nexus existent, mais le tunnel SSH de Colima les capture. C'est une collision de ressource : deux services veulent le même port. Solution long terme : reconfigurer Colima pour libérer 5001-5004, ou assigner un autre range au tunnel SSH.
