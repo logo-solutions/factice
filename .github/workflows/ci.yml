@@ -140,9 +140,9 @@ jobs:
       - name: Build Docker image
         run: docker build -t "factice:${{ github.sha }}" app
 
-      - name: Publish candidate (image + SBOM + manifest to Nexus localhost:5001)
+      - name: Publish candidate (image + SBOM + manifest to Nexus localhost:8082)
         env:
-          NEXUS_DOCKER_CANDIDAT: localhost:5001
+          NEXUS_DOCKER_CANDIDAT: localhost:8082
           NEXUS_USER: svc-build-factice-app
           NEXUS_PASSWORD: ${{ secrets.NEXUS_BUILD_PASSWORD }}
           VERSION: ${{ needs.test.outputs.version }}
