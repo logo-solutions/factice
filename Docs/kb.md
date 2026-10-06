@@ -134,3 +134,5 @@ Note : `gen-sbom.sh` suppose que `app/` a `node_modules/` à jour. C'est une gar
 - **Correctif** : step « Install dependencies » ajouté au build job avec `npm ci` dans le répertoire `app/`.
 - **Origine** : commit 2385249 (amendé ac0b9d9, run 83+).
 - **À vérifier** : run 83+ avec le commit 2385249 + fiches KB-012,013 devrait passer le job kb-check et req-check.
+
+## Preuve de push — 2026-10-06 20:50
