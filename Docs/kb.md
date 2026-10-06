@@ -74,3 +74,12 @@ Décision 14 de [decisions.md](decisions.md).
 - **Limite connue** : le `pg_hba.conf` par défaut de Homebrew est en `trust` sur localhost, donc le mot de passe n'est pas exigé pour un processus local.
 - **Origine** : run 37357901616 ; même famille que KB-005 et KB-006 (erreurs masquées).
 - **ITSM** : INC-2026-0003 (ouvert automatiquement par le pipeline).
+
+## KB-008 · Production : « Production deployment cancelled » et environnement GitHub sans relecteur
+
+- **Date** : 2026-10-06 · **Composant** : pipeline, playbook `deploy-factice-production.yml`
+- **Symptôme** : `deploy-production` échoue (`Production deployment cancelled`) juste après un `change-gate` réussi ; le job n'a attendu aucune approbation.
+- **Cause** : (1) le playbook demandait « yes » au clavier (`pause`), impossible dans un job CI ; (2) l'environnement GitHub `production` n'avait aucun relecteur requis, donc la seconde barrière du flux 2 n'existait pas.
+- **Correctif** : le `pause` est remplacé par une exigence d'un `change_id` (`-e change_id=CHG-AAAA-NNNN`, transmis par `ci.yml` depuis le job `change-gate`) ; relecteur requis configuré sur l'environnement `production` (`gh api -X PUT repos/<org>/factice/environments/production`). La confirmation humaine passe par l'approbation ITSM puis par celle de l'environnement. `prevent_self_review` reste faux : un seul humain déclenche et approuve. Vérifier : `gh api repos/<org>/factice/environments/production --jq '.protection_rules'`.
+- **Origine** : run 37414908865.
+- **ITSM** : INC-2026-0004 (ouvert automatiquement par le pipeline).

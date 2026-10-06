@@ -7,20 +7,12 @@
     factice_environment: production
 
   pre_tasks:
-    - name: Require production confirmation
-      pause:
-        prompt: |
-          ⚠️  PRODUCTION DEPLOYMENT ⚠️
-
-          This will deploy factice to production (port :9080).
-          Type 'yes' to continue, or Ctrl+C to cancel
-      register: prod_confirm
-
-    - name: Verify production confirmation
+    - name: Require an approved ITSM change
       assert:
         that:
-          - prod_confirm.user_input | lower == 'yes'
-        fail_msg: "Production deployment cancelled"
+          - change_id is defined
+          - change_id | regex_search('^CHG-[0-9]{4}-[0-9]{4}$')
+        fail_msg: "Production : passer -e change_id=CHG-AAAA-NNNN (changement approuvé dans l'ITSM, vérifié par le job change-gate)"
 
   roles:
     - factice

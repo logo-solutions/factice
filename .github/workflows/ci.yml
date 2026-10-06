@@ -296,7 +296,8 @@ jobs:
         run: |
           ansible-playbook deploy-factice-production.yml \
             --vault-password-file ~/.factice-vault-pass \
-            -e "factice_release_image=${NEXUS_DOCKER_RELEASE}/${APP_ID}/${COMPONENT}@${{ needs.promote.outputs.digest }}"
+            -e "factice_release_image=${NEXUS_DOCKER_RELEASE}/${APP_ID}/${COMPONENT}@${{ needs.promote.outputs.digest }}" \
+            -e "change_id=${{ needs.change-gate.outputs.change }}"
 
       - name: Verify production health
         run: curl -f http://localhost:9080/health
