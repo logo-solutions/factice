@@ -90,8 +90,8 @@ jobs:
           if [ -z "$BASE" ]; then BASE="0000000"; fi
           scripts/req/check-req.sh "$BASE" "$TETE"
 
-  build:
-    runs-on: self-hosted
+  test:
+    runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.meta.outputs.version }}
       build: ${{ steps.meta.outputs.build }}
@@ -127,24 +127,39 @@ jobs:
           echo "version=$(jq -r .version app/package.json)" >> "$GITHUB_OUTPUT"
           echo "build=${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
+  build:
+    needs: test
+    runs-on: self-hosted
+    if: github.event_name != 'pull_request'
+    outputs:
+      version: ${{ needs.test.outputs.version }}
+      build: ${{ needs.test.outputs.build }}
+    steps:
+      - uses: actions/checkout@v4
+
       - name: Build Docker image
         run: docker build -t "factice:${{ github.sha }}" app
 
-      - name: Publish candidate (image + SBOM + manifest via GHCR staging)
-        if: github.event_name != 'pull_request'
+      - name: Publish candidate (image + SBOM + manifest to Nexus localhost:5001)
         env:
-          NEXUS_DOCKER_CANDIDAT: ghcr.io/${{ github.repository_owner }}
+          NEXUS_DOCKER_CANDIDAT: localhost:5001
           NEXUS_USER: svc-build-factice-app
           NEXUS_PASSWORD: ${{ secrets.NEXUS_BUILD_PASSWORD }}
-          VERSION: ${{ steps.meta.outputs.version }}
-          BUILD: ${{ steps.meta.outputs.build }}
+          VERSION: ${{ needs.test.outputs.version }}
+          BUILD: ${{ needs.test.outputs.build }}
           COMMIT: ${{ github.sha }}
           IMAGE: factice:${{ github.sha }}
           APP_DIR: app
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "$GITHUB_TOKEN" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           COMMIT_DATE="$(git log -1 --format=%cI)" scripts/nexus/publish-candidate.sh
+
+  # TODO: Option 2 migration (2026-10-06)
+  # Refactor build job to run on ubuntu-latest avec Tailscale tunnel vers Mac Mini
+  # Architecture: ubuntu build → Tailscale VPN → localhost:5001 (Nexus sur Mac Mini)
+  # - Add tailscale-up step (auth via TAILSCALE_OAUTH_SECRET)
+  # - Set DOCKER_HOST pour pointer vers Mac Mini via Tailscale
+  # - Récupère l'isolation ubuntu/self-hosted et les tests sur ubuntu
+  # - See: https://claude.ai/artifact/YKb7r2EP6djsS3mjHzoFdJ (pipeline-blocker-analysis.md)
 
   promote:
     needs: build
