@@ -52,7 +52,7 @@
 - [alertes-et-reactivite.md](3-observabilite/alertes-et-reactivite.md) — Alertes, escalade, runbooks
 - [logs-et-traces.md](3-observabilite/logs-et-traces.md) — Logs structurés, traces distribuées, Loki
 - [apm-et-performance.md](3-observabilite/apm-et-performance.md) — Instrumentation Node.js, profiling, benchmarks
-- [cmdb.md](3-observabilite/cmdb.md) — CMDB NetBox : modèle, adaptateur, rapprochement avec le registry
+- [Projet cmdb](https://github.com/logo-solutions/cmdb) — CMDB NetBox : modèle, adaptateur, rapprochement avec le registry (hors de ce dépôt)
 
 ### 4️⃣ Sécurité : protéger la chaîne
 
