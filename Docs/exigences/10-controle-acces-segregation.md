@@ -1,6 +1,6 @@
 # ACC — Contrôle d'accès et ségrégation logique
 
-Premier jet à challenger. Toutes les exigences sont en version `0.1`, statut `brouillon`. Règles de versionnement : voir le [README](README.md#versionnement).
+Premier jet à challenger. Les exigences sont en version `0.1` (ACC-01 en `0.2`), statut `brouillon`. Règles de versionnement : voir le [README](README.md#versionnement).
 
 ## Enjeu du domaine
 
@@ -10,7 +10,7 @@ Une solution doit permettre de **cloisonner** les données et les actions par p�
 
 | ID | Titre | Version | Priorité | Preuve principale |
 |---|---|---|---|---|
-| ACC-01 | Ségrégation logique par périmètre | 0.1 | DOIT | DEM |
+| ACC-01 | Ségrégation logique par périmètre | 0.2 | DOIT | DEM |
 | ACC-02 | Contrôle d'accès par rôles | 0.1 | DOIT | DEM |
 | ACC-03 | Moindre privilège par défaut | 0.1 | DOIT | TST |
 | ACC-04 | Séparation des tâches | 0.1 | DOIT | DEM |
@@ -36,9 +36,9 @@ Une solution doit permettre de **cloisonner** les données et les actions par p�
 | Applicabilité | COTS, SaaS, low code |
 | Preuve attendue | DEM : deux périmètres créés, un utilisateur du premier ne voit ni ne modifie rien du second (interface et API) |
 | Critère d'acceptation | Aucune donnée du périmètre B visible depuis A, y compris par la recherche et l'API |
-| Réserve | Une simple documentation (DOC) ne suffit pas : l'API et la recherche sont des fuites classiques |
-| Source | ISO 27001:2022 A.5.15, A.8.3 ; OWASP ASVS (contrôle d'accès) |
-| Version | 0.1 |
+| Réserve | Une simple documentation (DOC) ne suffit pas : le cloisonnement doit être appliqué côté service sur chaque point d'entrée, API comprise (ASVS 5.0 : 8.2.2, 8.3.1). La recherche est un point d'entrée à tester explicitement (retour d'expérience, pas de contrôle ASVS dédié) |
+| Source | ISO 27001:2022 A.5.15, A.8.3 ; OWASP ASVS 5.0 : 8.2.2, 8.3.1, 8.4.1 (4.0.3 : 4.1.1, 4.2.1) |
+| Version | 0.2 |
 | Statut | brouillon |
 
 ### ACC-02 — Contrôle d'accès par rôles
