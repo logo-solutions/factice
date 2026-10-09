@@ -6,8 +6,6 @@ Mis à jour le 2026-10-09 (recherches des 8 et 9 octobre 2026).
 
 - **Légende de vérification** (même convention que `sre1.md`) : **lu** = texte officiel ouvert et relu ; **recoupé** = confirmé par des sources secondaires, texte officiel non relu ; **non vérifié** = connu mais pas confirmé ici.
 - **Extraits des textes sources** : [`sources.md`](sources.md).
-- **Réserve** : aucune de ces conclusions n'est un avis juridique. En cas de désaccord interne, les faire valider par le DPO ou un juriste en santé au travail.
-- **Vocabulaire** : le dossier s'appelle `proconnect`, mais le sujet est **Pro Santé Connect** (PSC, ANS, professionnels de santé), et non **ProConnect** (fédération d'identité des agents publics).
 
 ---
 
@@ -17,10 +15,10 @@ Mis à jour le 2026-10-09 (recherches des 8 et 9 octobre 2026).
 
 | Question | Réponse | Détail |
 |---|---|---|
-| Un médecin parti garde-t-il l'accès aux dossiers qu'il a ouverts ? | **Non.** Le dossier appartient au service ; l'accès suit le suivi du salarié. Désactiver le compte (sans le supprimer) au départ | §3 |
-| Qui désactive ? | La **direction du service** est responsable ; le **médecin du travail administrateur** du logiciel exécute | §3.4 |
+| Un médecin parti garde-t-il l'accès aux dossiers qu'il a ouverts ? | **Non.** Le dossier appartient au service ; l'accès suit le suivi du salarié. Désactiver le compte (sans le supprimer) au départ du praticien | §3 |
+| Qui désactive ? | La **direction du service** est responsable | §3.4 |
 | Quelles règles pour la connexion des praticiens ? | Référentiel d'identification électronique PGSSI-S (arrêté du 28/03/2022) : Pro Santé Connect, carte CPx, ou second moyen conforme ; mot de passe seul exclu | §2 |
-| Pro Santé Connect suffit-il ? | Il prouve l'identité, **pas le droit d'accès** : la désactivation au départ reste indispensable | §1.1 |
+| Pro Santé Connect suffit-il ? | Il prouve l'identité, **pas le droit d'accès** : la désactivation au départ du praticien reste indispensable | §1.1 |
 | Login + mot de passe ou MFA ? | **MFA au minimum** (accès à distance, deux facteurs) | §2.3 |
 | Quel impact sur l'architecture ? | Kitry client OIDC de Pro Santé Connect et fournisseur d'identité de son MFA ; comptes liés au RPPS sans création à la volée ; SIRH source des départs ; sessions ≤ 4 h ; moyen de secours encadré | §4 |
 | L'échéance du 1/1/2026 est-elle repoussée ? | **Pas encore en droit.** Projet de version 2 notifié à la Commission européenne (adoptable après le 15/12/2026) : attestation de conformité au 31/12/2026, réserves jusqu'au 31/12/2028 | §5 |
