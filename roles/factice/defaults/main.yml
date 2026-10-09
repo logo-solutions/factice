@@ -12,7 +12,8 @@ factice_docker_network: "factice-network"
 
 # Tier 1: Application Container (Node.js)
 tier_app_enabled: true
-tier_app_container_name: "factice-app"
+# Un conteneur par environnement, pour que integration et production coexistent (KB-014).
+tier_app_container_name: "{{ 'factice-app' if factice_environment == 'integration' else 'factice-app-production' }}"
 tier_app_docker_image: "node:20-alpine"
 # Image release immuable issue de Nexus (référence par empreinte). Vide :
 # comportement historique (sources montées dans node:20-alpine).
@@ -82,11 +83,6 @@ tier_bdd_runner_user: "logo"
 tier_bdd_config_file: "cucumber.js"
 tier_bdd_output_dir: "/tmp/factice-bdd-results"
 tier_bdd_parallel_jobs: 4
-
-# Stack deployment orchestration
-stack_name: "{{ factice_app_name }}"
-stack_dir: "{{ factice_base_dir }}"
-docker_network: "{{ factice_docker_network }}"
 
 # Validation configuration
 factice_validation_enabled: true

@@ -21,7 +21,7 @@ C'est le cœur du système de livraison continu et immuable.
 
 ### [orchestration/](orchestration/) — Ansible et déploiement
 - Orchestration des trois tiers (BDD, App, Web)
-- Rôle générique `deploy_stack`
+- Rôle générique `compose_deploy` (squelette commun)
 - Contrôles de santé, idempotence
 - Déploiement par empreinte (digest)
 
@@ -64,4 +64,4 @@ Healthcheck, événement de déploiement
 1. `ci-cd/pipeline-build-promotion.md` — Comprendre les 4 étapes
 2. `registry/nexus-architecture.md` — Gouvernance et immuabilité
 3. `orchestration/workflow-ansible.md` — Déploiement et orchestration
-4. `orchestration/deploy-stack-contract.md` — Rôle générique
+4. `orchestration/compose-deploy-contract.md` — Rôle générique

@@ -151,7 +151,7 @@ factice/
 ├── deploy-factice-production.yml      # Appelé par job deploy-production
 ├── provision-nexus.yml                # Provisionné à part, avant les livraisons
 ├── inventory/                         # Inventaire local
-├── roles/                             # Rôles Ansible (deploy_stack, factice, nexus, github_runner)
+├── roles/                             # Rôles Ansible (compose_deploy, factice, nexus, github_runner)
 └── app/                               # Application Node.js
 ```
 

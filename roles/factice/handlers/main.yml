@@ -14,11 +14,9 @@
   ignore_errors: true
 
 - name: Restart application container
-  community.docker.docker_compose_v2:
-    project_src: "{{ tier_app_base_dir }}"
-    services:
-      - app
-    state: restarted
+  ansible.builtin.command:
+    argv: [docker, compose, -p, "{{ factice_app_name }}-{{ factice_environment }}", restart, app]
+    chdir: "{{ tier_app_base_dir }}"
   environment:
     DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
   listen: "restart_app"

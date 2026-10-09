@@ -45,7 +45,7 @@ graph TD
 ```mermaid
 graph TD
     A1["Connexion au registre release<br/>(compte en lecture seule)"] --> A2["Rendu du fichier Compose<br/>et du fichier .env"]
-    A2 --> A3["roles/deploy_stack"]
+    A2 --> A3["roles/compose_deploy"]
     A3 --> A4["Création du réseau Docker"]
     A4 --> A5["docker compose up -d<br/>image tirée par empreinte"]
     A5 --> A6["Contrôle de santé<br/>/health, 30 tentatives"]
@@ -91,9 +91,9 @@ Les valeurs propres à un environnement (ports, répertoires, noms de base, éti
 - **Tier Web** : le Caddyfile est validé par `caddy validate` avant d'être mis en service ; l'interface d'administration de Caddy est désactivée afin que les deux environnements puissent coexister.
 - **Tier BDD** : création conditionnelle de l'utilisateur et de la base.
 
-### `roles/deploy_stack`
+### `roles/compose_deploy`
 
-Rôle générique, sans gabarit propre : l'appelant fournit `docker-compose.yml` et `.env`. Le rôle crée le répertoire et le réseau Docker, lance `community.docker.docker_compose_v2`, attend les URL de santé, puis affiche le résultat. Contrat : [deploy-stack-contract.md](deploy-stack-contract.md).
+Rôle générique commun à maisonnettev2, Nexus et factice. Ici utilisé en place : `roles/factice` fournit `docker-compose.yml` et `.env` et crée le réseau Docker ; le rôle se connecte au registre, tire l'image de release, lance `docker compose -p factice-<environnement> up -d`, puis vérifie le conteneur et l'URL de santé. Contrat : [compose-deploy-contract.md](compose-deploy-contract.md).
 
 ## Contrôles de santé
 
@@ -197,5 +197,5 @@ Les trois tiers ne se comportent pas comme sur un serveur Linux :
 ## Références
 
 - [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md) : qualité, tests, secrets, déploiement
-- [deploy-stack-contract.md](deploy-stack-contract.md) : contrat du rôle générique
+- [compose-deploy-contract.md](compose-deploy-contract.md) : contrat du rôle générique
 - [../ci-cd/pipeline-build-promotion.md](../ci-cd/pipeline-build-promotion.md) : appel depuis le workflow
