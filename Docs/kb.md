@@ -136,3 +136,12 @@ Note : `gen-sbom.sh` suppose que `app/` a `node_modules/` à jour. C'est une gar
 - **À vérifier** : run 83+ avec le commit 2385249 + fiches KB-012,013 devrait passer le job kb-check et req-check.
 
 ## Preuve de push — 2026-10-06 20:50
+
+## KB-014 · Integration et production partagent le projet compose « app »
+
+- **Date** : 2026-10-09 · **Composant** : Ansible, rôles `deploy_stack` (retiré) et `factice`
+- **Symptôme** : aucun incident survenu ; défaut constaté en préparant la migration vers le squelette commun `compose_deploy`. Le conteneur `factice-app` porte le label `com.docker.compose.project=app`.
+- **Cause** : `deploy_stack` lançait la pile sans nom de projet ; docker compose le déduisait du dossier, `app` dans les deux environnements (`~/factice/integration/app`, `~/factice/production/app`). Les deux environnements partageaient donc un projet, et le même nom de conteneur (`factice-app`) : le déploiement de l'un remplaçait le conteneur de l'autre. Avec `--remove-orphans` (utilisé par `compose_deploy`), il l'aurait même supprimé.
+- **Correctif** : projet nommé par environnement (`compose_deploy_project_name: factice-<environnement>`) et conteneur par environnement (`factice-app` en integration, `factice-app-production`). Migration unique dans `tier_app.yml` : le conteneur de l'ancien projet `app` est retiré pour être recréé sous le nouveau projet (conteneur sans volume, rien n'est perdu). `deploy_stack` est retiré au profit de `compose_deploy` ([contrat](2-pipeline-livraison/orchestration/compose-deploy-contract.md)), qui supprime aussi le risque du `docker system prune -f` de l'option `prune_on_deploy`.
+- **À vérifier** : après le déploiement d'integration, `docker inspect -f '{{ index .Config.Labels "com.docker.compose.project" }}' factice-app` rend `factice-integration` ; un second passage rend `changed=0`.
+

@@ -6,13 +6,13 @@ Elle tourne sur un hôte macOS, avec une architecture hétérogène à trois tie
 
 | Tier | Technologie | Géré par |
 |---|---|---|
-| App | Conteneur Docker (Node.js / Express) | `roles/deploy_stack` |
+| App | Conteneur Docker (Node.js / Express) | `roles/compose_deploy` |
 | Web | Reverse proxy Caddy natif, LaunchAgent macOS | `roles/factice` |
 | BDD | PostgreSQL natif, service Homebrew | `roles/factice` |
 
 ## Objectifs
 
-1. Disposer d'un rôle Ansible générique, `deploy_stack`, qui déploie un conteneur Docker de façon réutilisable et idempotente.
+1. Disposer d'un rôle Ansible générique, `compose_deploy` (squelette commun à maisonnettev2, Nexus et factice depuis le 2026-10-09 ; auparavant `deploy_stack`), qui déploie une pile Docker de façon réutilisable et idempotente.
 2. Prouver ce rôle sur une application réelle, avec des tests de bout en bout.
 3. Documenter l'orchestration de services natifs (Homebrew et LaunchAgent) par Ansible, sans Docker.
 4. Mettre en œuvre la gouvernance des artefacts décrite dans `Docs/2-pipeline-livraison/registry/` : dépôts candidat et release, promotion contrôlée, immuabilité des releases.
@@ -52,7 +52,7 @@ factice/
 │   ├── tests/
 │   └── Dockerfile
 ├── roles/
-│   ├── deploy_stack/              # rôle générique de déploiement Docker
+│   ├── compose_deploy/            # rôle générique de déploiement Docker (squelette commun)
 │   ├── factice/                   # orchestration des trois tiers
 │   ├── nexus/                     # dépôts, droits, nettoyage, conformité
 │   └── github_runner/             # runner GitHub Actions auto-hébergé

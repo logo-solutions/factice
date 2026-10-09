@@ -2,7 +2,7 @@
 
 Ce document confronte les rôles et playbooks de factice aux pratiques de référence pour une automatisation Ansible de production. Chaque section donne le **principe**, l'**état actuel** et la **cible**. Rien de ce qui est décrit en « cible » n'est encore appliqué au code.
 
-Contexte d'exécution : [workflow-ansible.md](workflow-ansible.md). Rôle générique : [deploy-stack-contract.md](deploy-stack-contract.md).
+Contexte d'exécution : [workflow-ansible.md](workflow-ansible.md). Rôle générique : [compose-deploy-contract.md](compose-deploy-contract.md).
 
 ## Synthèse
 
@@ -34,17 +34,17 @@ Contexte d'exécution : [workflow-ansible.md](workflow-ansible.md). Rôle géné
 
 **Principe.** Écrire `ansible.builtin.template` plutôt que `template`. Un nom complet lève toute ambiguïté si une collection fournit un module du même nom, et le profil `production` l'exige.
 
-**État.** `deploy_stack` appelle `community.docker.docker_compose_v2`, mais `template`, `shell`, `uri`, `pause`, `docker_network` sont écrits sans collection.
+**État.** `compose_deploy` utilise des noms complets (`ansible.builtin`) ; dans `roles/factice`, `template`, `shell`, `uri`, `pause` sont encore écrits sans collection.
 
 **Cible.** Qualifier tous les modules ; déclarer les collections nécessaires dans un `requirements.yml` versionné, avec leur version.
 
 ## 3. Validation des arguments des rôles
 
-**Principe.** `meta/argument_specs.yml` décrit les variables d'un rôle : type, défaut, caractère obligatoire, valeurs autorisées. Ansible valide les arguments au début du rôle et échoue avec un message clair. C'est la forme exécutable du contrat documenté dans [deploy-stack-contract.md](deploy-stack-contract.md).
+**Principe.** `meta/argument_specs.yml` décrit les variables d'un rôle : type, défaut, caractère obligatoire, valeurs autorisées. Ansible valide les arguments au début du rôle et échoue avec un message clair. C'est la forme exécutable du contrat documenté dans [compose-deploy-contract.md](compose-deploy-contract.md).
 
 **État.** Les contrats sont décrits en prose ; aucune validation.
 
-**Cible.** Un fichier `argument_specs.yml` pour `deploy_stack` et pour `factice`, avec en particulier `factice_environment` limité à `integration` et `production`, et `factice_release_image` obligatoire pour les déploiements.
+**Cible.** Un fichier `argument_specs.yml` pour `factice` (celui de `compose_deploy` existe depuis le 2026-10-09), avec en particulier `factice_environment` limité à `integration` et `production`, et `factice_release_image` obligatoire pour les déploiements.
 
 ## 4. Tests de rôles
 
@@ -55,10 +55,10 @@ Contexte d'exécution : [workflow-ansible.md](workflow-ansible.md). Rôle géné
 | Niveau | Cible | Couvre |
 |---|---|---|
 | Syntaxe et analyse | n'importe où | tous les rôles |
-| Molecule, conteneur Linux | `deploy_stack` | création de la pile, santé, idempotence (la pile est un conteneur) |
+| Molecule, conteneur Linux | `compose_deploy` (scénario dans maisonnettev2) | création de la pile, santé, idempotence (la pile est un conteneur) |
 | Exécution réelle sur l'hôte macOS, en intégration | l'hôte | tiers natifs : le second passage doit rendre `changed=0` |
 
-**Cible.** Un scénario Molecule pour `deploy_stack`, et un contrôle d'idempotence systématique sur l'environnement d'intégration (le workflow lance le playbook deux fois, le second doit rapporter `changed=0`).
+**Cible.** Le scénario Molecule de `compose_deploy` existe (dans maisonnettev2) ; reste un contrôle d'idempotence systématique sur l'environnement d'intégration (le workflow lance le playbook deux fois, le second doit rapporter `changed=0`).
 
 ## 5. Simulation avant déploiement
 
@@ -97,7 +97,7 @@ Contexte d'exécution : [workflow-ansible.md](workflow-ansible.md). Rôle géné
 - `block` / `rescue` / `always` pour une action de récupération explicite ;
 - des modules idempotents plutôt que `shell` + code de retour.
 
-**État.** `ignore_errors: true` figure dans `deploy_stack` (création du réseau), dans les gestionnaires de `factice` et dans le tier BDD.
+**État.** `ignore_errors: true` figure dans les gestionnaires de `factice` et dans le tier BDD.
 
 **Cible.** Les remplacer un à un, en listant pour chacun le cas d'erreur réellement attendu.
 
@@ -132,10 +132,10 @@ Un seul hôte porte l'application : on ne peut pas faire de déploiement progres
 | 1 | Chiffrer ou externaliser les secrets du coffre | faible |
 | 2 | `.ansible-lint` (profil `production`), `.yamllint`, `--syntax-check` en CI | faible |
 | 3 | Qualifier les modules, retirer les `ignore_errors` | moyen |
-| 4 | `argument_specs.yml` pour `deploy_stack` et `factice` | moyen |
+| 4 | `argument_specs.yml` pour `factice` (fait pour `compose_deploy`) | moyen |
 | 5 | Contrôle d'idempotence (double passage) en intégration | faible |
 | 6 | Simulation `--check --diff` avant la production, puis planifiée | moyen |
-| 7 | Scénario Molecule pour `deploy_stack` | moyen |
+| 7 | Scénario Molecule pour `compose_deploy` : fait (dans maisonnettev2) | — |
 | 8 | Retour arrière automatique sur échec de santé | moyen |
 
 ## Références

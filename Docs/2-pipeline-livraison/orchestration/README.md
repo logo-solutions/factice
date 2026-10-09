@@ -1,6 +1,6 @@
 # Orchestration : Ansible et déploiement
 
-Cette section décrit comment Ansible orchestre le déploiement des trois tiers et l'application du rôle générique `deploy_stack`.
+Cette section décrit comment Ansible orchestre le déploiement des trois tiers et l'application du rôle générique `compose_deploy` (squelette commun à l'écosystème).
 
 Points clés :
 - **Orchestration locale** : Ansible s'exécute sur l'hôte lui-même, pas en SSH distant
@@ -10,5 +10,5 @@ Points clés :
 
 Documents :
 - [workflow-ansible.md](workflow-ansible.md) — Flux d'exécution, contrôles de santé
-- [deploy-stack-contract.md](deploy-stack-contract.md) — Contrat du rôle générique et écarts
+- [compose-deploy-contract.md](compose-deploy-contract.md) — Contrat du rôle générique et écarts traités
 - [bonnes-pratiques-ansible.md](bonnes-pratiques-ansible.md) — Qualité, tests, secrets, déploiement : état, écart, cible

@@ -26,7 +26,7 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 - Illustrer la gestion d'un service Homebrew et d'un LaunchAgent de façon idempotente et déclarative.
 - Refléter les déploiements réels, où tout ne tourne pas dans Docker.
 
-**Alternative écartée** : exécuter le reverse proxy dans un conteneur. C'est plus simple (tout passerait par `deploy_stack`), mais on perdrait la démonstration de l'orchestration de services natifs.
+**Alternative écartée** : exécuter le reverse proxy dans un conteneur. C'est plus simple (tout passerait par le rôle générique de conteneurs), mais on perdrait la démonstration de l'orchestration de services natifs.
 
 **Conclusion** : reverse proxy natif, via Homebrew et LaunchAgent.
 
@@ -221,4 +221,14 @@ Chaque décision suit la même forme : la décision, ses raisons, l'alternative 
 - `change-gate` est déjà un blocage technique : sans changement approuvé, `deploy-production` ne démarre pas. L'ITSM porte aussi l'exigence ACC-04 (approbateur différent du demandeur).
 
 **Limite** : le changement n'est pas lié à une empreinte précise avant le déploiement ; avec plusieurs humains, remettre un relecteur d'environnement.
+
+## 17. Squelette de déploiement commun à l'écosystème
+
+**Décision** : le tier App est déployé par `roles/compose_deploy`, le rôle générique de maisonnettev2 (aussi utilisé pour Nexus), à la place du rôle propre `deploy_stack`.
+
+**Raisons**
+- Un seul squelette à maintenir et à tester : `compose_deploy` a un scénario Molecule et un `meta/argument_specs.yml`, ce qui couvrait deux cibles du document des bonnes pratiques.
+- Le rôle n'utilise que `ansible.builtin` et la CLI Docker ; il expose les options utiles au Mac mini partagé (pas de suppression d'image, nom de projet explicite).
+
+**Limite** : factice garde une copie du rôle, à resynchroniser depuis maisonnettev2 à chaque évolution.
 

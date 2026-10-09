@@ -7,7 +7,7 @@ factice sépare une application en trois tiers aux modes d'exécution volontaire
 | Tier | Rôle | Exécution | Gestion |
 |---|---|---|---|
 | Web | Reverse proxy HTTP | Caddy natif, installé par Homebrew | LaunchAgent macOS |
-| App | API Node.js / Express | Conteneur Docker | `roles/deploy_stack`, appelé par `roles/factice` |
+| App | API Node.js / Express | Conteneur Docker | `roles/compose_deploy`, appelé par `roles/factice` |
 | BDD | Persistance | PostgreSQL 18 natif, installé par Homebrew | `brew services` |
 
 Une seule instance par tier et par environnement. Pas de haute disponibilité : ce n'est pas l'objet de la maquette.
@@ -48,7 +48,7 @@ API applicative de l'exemple :
 | `GET /items` | liste les éléments lus en base |
 | `POST /items` | crée un élément en base |
 
-- Déployé par `roles/deploy_stack` à partir du template `docker-compose.app.yml.j2`.
+- Déployé par `roles/compose_deploy` (squelette commun à l'écosystème) à partir du template `docker-compose.app.yml.j2`, projet compose `factice-<environnement>`.
 - L'image est soit une release immuable de Nexus, référencée par empreinte (`factice_release_image`), soit, en développement, une image Node générique dans laquelle les sources sont montées.
 - Politique de redémarrage `unless-stopped` ; contrôle de santé du conteneur et contrôle de santé Ansible.
 - Joint PostgreSQL, qui tourne sur l'hôte, par `host.docker.internal` (déclaré par `extra_hosts` dans le fichier Compose).
@@ -95,11 +95,11 @@ Le rôle `roles/factice` orchestre les trois tiers dans cet ordre : préparation
 |---|---|---|
 | Préparation | `tasks/main.yml` | contrôle de l'environnement, création des répertoires |
 | BDD | `tasks/tier_db.yml` | installation et démarrage de PostgreSQL, création de l'utilisateur et de la base |
-| App | `tasks/tier_app.yml` | connexion au registre (compte de lecture seule), rendu des fichiers, appel de `deploy_stack` |
+| App | `tasks/tier_app.yml` | rendu des fichiers, réseau Docker, appel de `compose_deploy` (connexion au registre en lecture seule, pull, démarrage, contrôles) |
 | Web | `tasks/tier_web.yml` | installation de Caddy, validation de la configuration, LaunchAgent |
 | Validation | `tasks/validation.yml` | santé de chaque tier, résumé |
 
-`roles/deploy_stack` est générique : il crée le répertoire et le réseau Docker, rend le fichier Compose, tire les images, démarre la pile et attend les contrôles de santé. Son contrat est décrit dans [contrat-deploy-stack.md](2-pipeline-livraison/orchestration/deploy-stack-contract.md).
+`roles/compose_deploy` est le rôle générique commun à maisonnettev2, Nexus et factice : il tire les images, démarre la pile et vérifie conteneurs et URL de santé. Son contrat est décrit dans [compose-deploy-contract.md](2-pipeline-livraison/orchestration/compose-deploy-contract.md).
 
 Les valeurs propres à chaque environnement (ports, noms de base, niveau de journalisation) sont dérivées de la variable `factice_environment`, dans `roles/factice/defaults/main.yml`.
 

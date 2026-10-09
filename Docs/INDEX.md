@@ -41,7 +41,7 @@
 #### Orchestration (Ansible)
 **[orchestration/](2-pipeline-livraison/orchestration/README.md)**
 - [workflow-ansible.md](2-pipeline-livraison/orchestration/workflow-ansible.md) — Orchestration des 3 tiers (BDD, App, Web), contrôles de santé
-- [deploy-stack-contract.md](2-pipeline-livraison/orchestration/deploy-stack-contract.md) — Contrat du rôle générique `deploy_stack` et écarts
+- [compose-deploy-contract.md](2-pipeline-livraison/orchestration/compose-deploy-contract.md) — Contrat du rôle générique `compose_deploy` (squelette commun) et écarts traités
 - [bonnes-pratiques-ansible.md](2-pipeline-livraison/orchestration/bonnes-pratiques-ansible.md) — Qualité, tests, secrets, déploiement : état, écart, cible
 
 ### 3️⃣ Observabilité : visibilité et traçabilité

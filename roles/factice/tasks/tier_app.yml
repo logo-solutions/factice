@@ -11,15 +11,6 @@
         - "{{ tier_app_base_dir }}/src"
         - "{{ tier_app_base_dir }}/config"
 
-    - name: Authentification au registre des releases
-      community.docker.docker_login:
-        docker_host: "{{ docker_host | default(omit) }}"
-        registry_url: "{{ factice_release_image.split('/')[0] }}"
-        username: "{{ factice_registry_user }}"
-        password: "{{ lookup('ansible.builtin.env', 'NEXUS_DEPLOY_PASSWORD') }}"
-      no_log: true
-      when: factice_release_image | length > 0
-
     - name: Template docker-compose for app tier
       template:
         src: "docker-compose.app.yml.j2"
@@ -32,17 +23,67 @@
         dest: "{{ tier_app_base_dir }}/.env"
         mode: "0600"
 
-    - name: Use deploy_stack role for application container
-      include_role:
-        name: deploy_stack
+    # Réseau externe déclaré par le compose : créé ici, le rôle compose_deploy
+    # ne gère que la pile.
+    - name: Réseau Docker de factice
+      community.docker.docker_network:
+        name: "{{ factice_docker_network }}"
+        driver: bridge
+        state: present
+        docker_host: "{{ docker_host | default(omit) }}"
+
+    # Migration unique (2026-10-09, KB-014) : le conteneur créé par l'ancien
+    # rôle deploy_stack appartient au projet compose « app ». Le nom de
+    # conteneur étant fixe, le nouveau projet ne peut pas le recréer tant
+    # qu'il existe. Conteneur sans volume : rien n'est perdu.
+    - name: Projet compose actuel du conteneur applicatif
+      ansible.builtin.command:
+        argv: [docker, inspect, -f, '{{ "{{" }} index .Config.Labels "com.docker.compose.project" {{ "}}" }}', "{{ tier_app_container_name }}"]
+      environment:
+        DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
+      register: tier_app_projet_actuel
+      changed_when: false
+      failed_when: false
+      check_mode: false
+
+    - name: Retirer le conteneur de l'ancien projet « app »
+      ansible.builtin.command:
+        argv: [docker, rm, -f, "{{ tier_app_container_name }}"]
+      environment:
+        DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
+      when:
+        - tier_app_projet_actuel.rc == 0
+        - tier_app_projet_actuel.stdout | trim == 'app'
+      changed_when: true
+
+    # Même squelette que maisonnettev2 et Nexus (roles/compose_deploy), utilisé
+    # en place : le compose et le .env sont générés ci-dessus.
+    # Un nom de projet par environnement : integration et production ont le
+    # même dossier « app », donc le même projet compose sans -p, et
+    # --remove-orphans de l'un supprimerait le conteneur de l'autre (KB-014).
+    - name: Déployer le conteneur applicatif (compose_deploy)
+      ansible.builtin.include_role:
+        name: compose_deploy
+        apply:
+          environment:
+            DOCKER_HOST: "{{ docker_host | default('unix:///var/run/docker.sock') }}"
       vars:
-        stack_name: "{{ tier_app_container_name }}"
-        stack_dir: "{{ tier_app_base_dir }}"
-        pull_images: true
-        recreate_containers: "{{ factice_environment == 'production' }}"
-        healthcheck_urls: ["{{ tier_app_healthcheck_endpoint }}"]
-        healthcheck_retries: "{{ tier_app_healthcheck_retries }}"
-        healthcheck_delay: "{{ tier_app_healthcheck_delay }}"
+        compose_deploy_dir: "{{ tier_app_base_dir }}"
+        compose_deploy_compose_file: docker-compose.yml
+        compose_deploy_project_name: "{{ factice_app_name }}-{{ factice_environment }}"
+        compose_deploy_env_file: .env
+        compose_deploy_registry: "{{ factice_release_image.split('/')[0] if factice_release_image | length > 0 else '' }}"
+        compose_deploy_registry_user: "{{ factice_registry_user }}"
+        compose_deploy_registry_token: >-
+          {{ lookup('ansible.builtin.env', 'NEXUS_DEPLOY_PASSWORD') if factice_release_image | length > 0 else '' }}
+        compose_deploy_pull_services: "{{ ['app'] if factice_release_image | length > 0 else [] }}"
+        # Mac mini partagé (Immich, Nexus…) : aucune suppression d'image.
+        compose_deploy_prune_images: false
+        compose_deploy_required_containers: ["{{ tier_app_container_name }}"]
+        compose_deploy_health_checks:
+          - {url: "{{ tier_app_healthcheck_endpoint }}", status: 200}
+        compose_deploy_health_retries: "{{ tier_app_healthcheck_retries }}"
+        compose_deploy_health_delay: "{{ tier_app_healthcheck_delay }}"
 
     - name: Wait for application container to be ready
       uri:
