@@ -1,0 +1,44 @@
+# Modèle : réponse d'un éditeur à une consultation (dépôt)
+#
+# Emplacement : consultations/CONS-AAAA-NN/reponses/<editeur>.yml
+# Un fichier par éditeur et par consultation. Le pipeline le lit pour contrôler
+# les références et produire la matrice de conformité.
+# Copier ce modèle, supprimer les commentaires, ne jamais y mettre de secret.
+
+consultation: CONS-AAAA-NN          # identifiant de la page wiki
+editeur: nom-de-l-editeur
+solution: nom-de-la-solution
+version_solution: "x.y"             # version évaluée
+date_reponse: AAAA-MM-JJ
+exigences_version_ref: etiquette    # étiquette du dépôt figeant les exigences envoyées
+
+reponses:
+  - exigence: ACC-01                # doit exister
+    version: "1.0"                  # doit exister, et correspondre à l'étiquette
+    conformite: conforme            # conforme | partiel | non_conforme | non_applicable | sans_reponse
+    preuve_fournie: DEM             # DOC | ATT | DEM | TST | CTR | aucune
+    preuve_ref: ""                  # nom du document, lien, numéro de certificat
+    verifiee: false                 # true seulement si nous avons vérifié la preuve
+    verifiee_par: ""                # obligatoire si verifiee: true
+    date_verification: ""           # obligatoire si verifiee: true (AAAA-MM-JJ)
+    ecart: ""                       # obligatoire si conformite n'est pas "conforme"
+    commentaire: ""
+
+  - exigence: ACC-02
+    version: "1.0"
+    conformite: partiel
+    preuve_fournie: DOC
+    preuve_ref: "guide-administration-v4.pdf, chapitre 7"
+    verifiee: false
+    verifiee_par: ""
+    date_verification: ""
+    ecart: "Rôles personnalisés limités à 10 ; pas de limitation par périmètre."
+    commentaire: ""
+
+# Règles contrôlées par le pipeline
+# 1. exigence + version existent dans le référentiel et la version est `diffusée`.
+# 2. conformite ∈ {conforme, partiel, non_conforme, non_applicable, sans_reponse}.
+# 3. conformite ≠ conforme ⇒ ecart renseigné.
+# 4. verifiee: true ⇒ verifiee_par et date_verification renseignés.
+# 5. exigence DOIT dont preuve_fournie = DOC seule : signalée dans la matrice.
+# 6. aucune exigence envoyée ne manque dans la liste (sinon : sans_reponse).
