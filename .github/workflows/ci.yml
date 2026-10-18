@@ -74,6 +74,7 @@ jobs:
           scripts/kb/check-kb.sh "$BASE" "$TETE"
 
   req-check:
+    if: false  # gestion des exigences désactivée
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -115,9 +116,11 @@ jobs:
         working-directory: app
 
       - name: Preuves de tests par exigence (flux 6)
+        if: false  # gestion des exigences désactivée
         run: node scripts/req/evidence.js
 
       - uses: actions/upload-artifact@v4
+        if: false  # gestion des exigences désactivée
         with:
           name: preuves-exigences
           path: preuves/preuves-exigences.md
@@ -178,6 +181,7 @@ jobs:
           fetch-depth: 0
 
       - uses: actions/download-artifact@v4
+        if: false  # gestion des exigences désactivée
         with:
           name: preuves-exigences
           path: preuves
@@ -193,6 +197,7 @@ jobs:
         run: scripts/nexus/promote.sh | tee -a "$GITHUB_OUTPUT"
 
       - name: Notes de version (flux 7)
+        if: false  # gestion des exigences désactivée
         env:
           VERSION: ${{ needs.build.outputs.version }}
           DIGEST: ${{ steps.promote.outputs.digest }}
@@ -202,6 +207,7 @@ jobs:
           scripts/release/notes.sh "$VERSION" "$DIGEST" "$BASE" | tee notes/notes-de-version.md >> "$GITHUB_STEP_SUMMARY"
 
       - uses: actions/upload-artifact@v4
+        if: false  # gestion des exigences désactivée
         with:
           name: notes-de-version
           path: notes/notes-de-version.md
