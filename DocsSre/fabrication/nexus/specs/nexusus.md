@@ -20,6 +20,47 @@ Variables utilisées dans les démos :
 - **Nomenclature complète** : plus tard. Seul l'identifiant `service.hra` est fixé.
 - **Hors périmètre** (infrastructure, traitée par ailleurs) : sauvegarde et restauration (R10), supervision et seuils d'alerte disque, rétention et nettoyage du candidat.
 
+## État d'avancement (2026-10-19)
+
+Instance réelle : conteneur `nexus` (image `sonatype/nexus3:3.96.3`, **édition Community**). Le présent document exige Pro : l'écart est **ouvert** (licence Pro, ou révision de la décision). Données dans `/Volumes/HDD6/02-Chaude/nexus/nexus-data`, instance réinitialisée le 2026-10-18 (anciennes données mises de côté). Accès : `127.0.0.1:8081` et Tailscale `100.113.214.55:8081`.
+
+**Dépôts** (nom `factice.app` pour l'instant)
+
+| Dépôt | Type | Port | Blob store | Politique |
+|---|---|---|---|---|
+| `docker-candidat` | docker hosted | 8082 | `docker-candidat` | Allow redeploy |
+| `docker-release` | docker hosted | 5002 | `docker-release` | Disable redeploy |
+| `raw-candidat` | raw hosted | HTTP | `raw-candidat` | Allow redeploy |
+
+**Comptes** (un par usage ; mots de passe dans Bitwarden et `vault.yml`, jamais dans le dépôt)
+
+| Compte | Rôle | Usage |
+|---|---|---|
+| `ci-logo` | `ci-candidat-push` | Build manuel, tests |
+| `svc-promotion` | `svc-promotion` | Promotion candidat vers release |
+| `svc-deploiement` | `svc-deploiement` | Lecture de la release |
+| `svc-build-factice-app` | `svc-build-factice-app` (créé le 2026-10-19) | Build de la CI `factice`. Connexion à tester |
+| `admin` | administrateur | Administration uniquement, jamais dans la CI |
+
+**Statut des stories**
+
+| Story | Statut | Commentaire |
+|---|---|---|
+| S1 Dépôts et blob stores | Fait | Ports 8082 et 5002 vérifiés (`401` sans compte) |
+| S2 Préfixe et sélecteur `service.hra` | À décider | Propre au pilote Achera |
+| S3 Rôles et comptes | Partiel | Rôles en place ; accès anonyme refusé par configuration, à tester dans l'interface |
+| S4 Ingestion manuelle | Fait | Push de test sur le candidat |
+| S5 Manifeste de release | À faire | Modèle défini (§6.4 du spec) |
+| S6 Promotion candidat vers release | Partiel | Le compte `svc-promotion` pousse dans la release ; promotion réelle depuis le candidat non testée |
+| S7 Release immuable | Fait | Second push refusé (`redeploy is not allowed`) |
+| S8 Nettoyage | Hors lot 1 | Politique « candidat 7 jours » créée, non attachée ; à traiter dans l'infrastructure |
+| S9 Supervision | Hors lot 1 | Plan : sonde `/service/rest/v1/status`, alerte disque |
+| S10 Runbook | À faire | À rédiger à partir des étapes réelles |
+
+**Pipeline CI** (`ci.yml`) : le job `build` tourne sur le runner `macmini-factice` (en ligne) et publie image, SBOM et manifeste. Restent à faire : passer le compte de build à `svc-build-factice-app` (le secret `NEXUS_BUILD_PASSWORD` doit alors être celui de ce compte) et corriger la variable `NEXUS_DOCKER_CANDIDAT` (`localhost:5001` au lieu de `8082`), en PR.
+
+**Reste à faire, par ordre** : tester la connexion de `svc-build-factice-app` ; PR `ci.yml` ; attacher la politique de nettoyage (S8) ; supprimer les images de test (`factice.app/test-ci` dans le candidat, `factice.app/test-s7` dans la release, par l'administrateur seulement) ; trancher l'édition (Pro ou Community) ; S5, S10.
+
 ## Epic : Lot 1 – Registry Nexus Pro
 
 ### S1 – Dépôts pour Achera
