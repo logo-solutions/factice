@@ -1,4 +1,4 @@
-# Lot 1 – Registry Nexus (pilote service.hra)
+# Lot 1 – Registry Nexus (pilote service.monex)
 
 Stories du lot 1. Chaque story est autonome : les règles, les chemins, les paramètres et les critères de recette dont elle a besoin sont écrits dans la story elle-même. Aucune lecture d'un autre document n'est nécessaire.
 
@@ -6,13 +6,13 @@ Chaque story a une section **Démo** : la manière de montrer qu'elle est termin
 
 Variables utilisées dans les démos :
 - `NEXUS` : URL de base de l'instance (ex. `http://nexus.local:8081`)
-- `APP` : identifiant de l'application, `service.hra`
+- `APP` : identifiant de l'application, `service.monex`
 - `USER_EDITEUR`, `USER_LECTEUR`, `USER_PROMO`, `USER_EXPLOITATION` : comptes de test, mots de passe dans le coffre (jamais dans ce fichier)
 
 ## Décisions retenues
 
 - **Édition** : Nexus Repository Pro. L'instance actuelle est en édition Community : l'écart est ouvert (voir « Points ouverts », point 1).
-- **Application pilote** : identifiant `service.hra`. Il est fixé ; la nomenclature complète viendra plus tard.
+- **Application pilote** : identifiant `service.monex`. Il est fixé ; la nomenclature complète viendra plus tard.
 - **Formats du lot 1** : raw et Docker. Maven et npm sont exclus du lot 1 (voir « Points ouverts », point 5).
 - **SBOM** : obligatoire dès le lot 1. Tout artefact promu porte un SBOM CycloneDX.
 - **Haute disponibilité** : reportée à un lot ultérieur (offre Pro, base externe, stockage de blobs partagé).
@@ -47,7 +47,7 @@ Instance réelle : conteneur `nexus` (image `sonatype/nexus3:3.96.3`, **édition
 | Story | Statut | Commentaire |
 |---|---|---|
 | S1 Dépôts et blob stores | Fait | Ports 8082 et 5002 vérifiés (`401` sans compte). Dépôts `raw-release` et `raw-candidat` à compléter pour le format raw (voir S1) |
-| S2 Chemin et sélecteur `service.hra` | À décider | Pilote Achera ; à appliquer à `factice.app` si on le retient |
+| S2 Chemin et sélecteur `service.monex` | À décider | Pilote Monex ; à appliquer à `factice.app` si on le retient |
 | S3 Rôles et comptes | Partiel | Comptes en place, mais les rôles réels diffèrent de la liste de S3 (voir point 6) |
 | S4 Ingestion manuelle | Fait | Push de test sur le candidat |
 | S5 Manifeste et attestations | À faire | Modèle défini |
@@ -85,21 +85,21 @@ Règles :
 2. Vérifier la politique d'écriture de chaque release : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/repositories/raw-release"` → `writePolicy` = `ALLOW_ONCE`.
 3. Docker : `docker login docker-candidat.<hôte>` (routage **à confirmer**, voir point 10) → connexion réussie.
 
-### S2 – Chemin et sélecteur de contenu `service.hra`
+### S2 – Chemin et sélecteur de contenu `service.monex`
 
-En tant que responsable de la gouvernance, je veux que tout artefact du pilote soit sous le préfixe `service.hra`, afin qu'une application ne puisse publier que sous son identifiant.
+En tant que responsable de la gouvernance, je veux que tout artefact du pilote soit sous le préfixe `service.monex`, afin qu'une application ne puisse publier que sous son identifiant.
 
 Règles :
 - Le premier niveau du chemin est l'identifiant de l'application, en minuscules, stable et unique. Une application ne publie pas sans identifiant enregistré.
 - Raw : chemin `<identifiant>/<composant>/<version>/<fichier>`. Candidat : version suivie du numéro de build pour les images dorées ; version éditeur inchangée pour les composants éditeur. Release : version seule.
-- Docker : le premier segment du nom d'image est l'identifiant (`service.hra/<image>:<version>`).
-- Un sélecteur de contenu limite chaque dépôt hébergé du pilote au préfixe `service.hra/`, pour raw comme pour Docker.
+- Docker : le premier segment du nom d'image est l'identifiant (`service.monex/<image>:<version>`).
+- Un sélecteur de contenu limite chaque dépôt hébergé du pilote au préfixe `service.monex/`, pour raw comme pour Docker.
 - Une publication sous un autre préfixe est refusée.
 
 **Démo**
-1. Publier sous le préfixe : `curl -u $USER_EDITEUR --upload-file test.txt "$NEXUS/repository/raw-candidat/service.hra/app/1.0.0/test.txt"` → `201`.
+1. Publier sous le préfixe : `curl -u $USER_EDITEUR --upload-file test.txt "$NEXUS/repository/raw-candidat/service.monex/app/1.0.0/test.txt"` → `201`.
 2. Publier sous un autre préfixe : même commande vers `.../raw-candidat/autre-app/1.0.0/test.txt` → refus (`403`).
-3. Vérifier le sélecteur : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/security/content-selectors"` → expression du type `path =^ "/service.hra/"`, rattachée aux dépôts du pilote.
+3. Vérifier le sélecteur : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/security/content-selectors"` → expression du type `path =^ "/service.monex/"`, rattachée aux dépôts du pilote.
 
 ### S3 – Rôles et comptes
 
@@ -112,8 +112,8 @@ Règles :
 - Les rôles réellement en place (voir « État d'avancement ») diffèrent de cette liste : l'écart est traité au point 6.
 
 **Démo**
-1. Anonyme refusé : `curl -I "$NEXUS/repository/raw-release/service.hra/app/1.0.0/test.txt"` → `401` ou `403`, et `curl -s "$NEXUS/service/rest/v1/security/anonymous"` → `"enabled": false`.
-2. Lecteur en lecture seule : `curl -u $USER_LECTEUR -X PUT --upload-file test.txt "$NEXUS/repository/raw-candidat/service.hra/app/1.0.0/test.txt"` → refus.
+1. Anonyme refusé : `curl -I "$NEXUS/repository/raw-release/service.monex/app/1.0.0/test.txt"` → `401` ou `403`, et `curl -s "$NEXUS/service/rest/v1/security/anonymous"` → `"enabled": false`.
+2. Lecteur en lecture seule : `curl -u $USER_LECTEUR -X PUT --upload-file test.txt "$NEXUS/repository/raw-candidat/service.monex/app/1.0.0/test.txt"` → refus.
 3. Éditeur limité au candidat : même PUT avec `$USER_EDITEUR` vers `raw-release` → refus ; vers `raw-candidat` → `201`.
 4. Chaque rôle de la liste existe : `curl -u $USER_EXPLOITATION "$NEXUS/service/rest/v1/security/roles"` → les six rôles présents.
 
@@ -122,14 +122,14 @@ Règles :
 En tant que développeur du pilote, je veux téléverser un artefact et son SBOM dans le candidat selon un runbook, afin de tester le dépôt avant toute automatisation.
 
 Règles :
-- Le chemin commence par `service.hra`.
+- Le chemin commence par `service.monex`.
 - L'artefact est téléchargeable, avec son empreinte SHA-256.
 - Le SBOM est au format CycloneDX JSON, nommé `<composant>-<version>.cdx.json`, rangé à côté de l'artefact. Il contient au minimum les composants et versions, les licences, et la référence du dépôt source et du commit quand ils existent.
 - Un téléversement est atomique : artefact, manifeste (S5) et SBOM sont présents ensemble, ou aucun ne reste.
 
 **Démo**
-1. Téléverser l'artefact et son SBOM (`app-1.0.0.cdx.json`) sous `service.hra/app/1.0.0/`.
-2. Télécharger et comparer l'empreinte : `curl -u $USER_LECTEUR -s "$NEXUS/repository/raw-candidat/service.hra/app/1.0.0/app.tgz" | sha256sum` doit égaler le `sha256` renvoyé par `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/search?repository=raw-candidat&name=service.hra/app/1.0.0/app.tgz"`.
+1. Téléverser l'artefact et son SBOM (`app-1.0.0.cdx.json`) sous `service.monex/app/1.0.0/`.
+2. Télécharger et comparer l'empreinte : `curl -u $USER_LECTEUR -s "$NEXUS/repository/raw-candidat/service.monex/app/1.0.0/app.tgz" | sha256sum` doit égaler le `sha256` renvoyé par `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/search?repository=raw-candidat&name=service.monex/app/1.0.0/app.tgz"`.
 3. Vérifier la présence du SBOM à côté : même recherche sur `app-1.0.0.cdx.json`.
 
 ### S5 – Manifeste de release et attestations signées
@@ -157,7 +157,7 @@ Règles :
 - La signature est vérifiée avant promotion (intégrée à S6).
 
 **Démo**
-1. Ouvrir le manifeste : `curl -u $USER_LECTEUR "$NEXUS/repository/raw-candidat/service.hra/app/1.0.0/app-1.0.0.manifest.json"` → champs `application`, `composant`, `version`, `build`, `commit`, `dateCommit`, `origineSbom` présents.
+1. Ouvrir le manifeste : `curl -u $USER_LECTEUR "$NEXUS/repository/raw-candidat/service.monex/app/1.0.0/app-1.0.0.manifest.json"` → champs `application`, `composant`, `version`, `build`, `commit`, `dateCommit`, `origineSbom` présents.
 2. Vérifier la signature (**à confirmer** : Cosign ne signe pas nativement un fichier raw ; méthode probable `cosign verify-blob --bundle`, ou attestation OCI si l'artefact est une image) : `cosign verify-blob --bundle app.tgz.sigstore.json --certificate-identity <identité du workflow> --certificate-oidc-issuer <émetteur> app.tgz` → `Verified OK`.
 3. Modifier un octet de l'artefact et relancer la vérification → échec attendu.
 
@@ -174,10 +174,10 @@ Règles :
 - L'empreinte est identique avant et après la promotion.
 
 **Démo**
-1. Docker : noter le digest du candidat (`crane digest docker-candidat.<hôte>/service.hra/app@<digest>`), copier par digest vers `docker-release` (`skopeo copy --all docker://…@<digest> docker://docker-release.<hôte>/service.hra/app@<digest>`), puis vérifier que le digest est identique côté release.
+1. Docker : noter le digest du candidat (`crane digest docker-candidat.<hôte>/service.monex/app@<digest>`), copier par digest vers `docker-release` (`skopeo copy --all docker://…@<digest> docker://docker-release.<hôte>/service.monex/app@<digest>`), puis vérifier que le digest est identique côté release.
 2. Raw, repli par republication contrôlée :
-   - `sha256sum app.tgz`, puis `curl -u $USER_LECTEUR -s "$NEXUS/service/rest/v1/search?repository=raw-candidat&name=service.hra/app/1.0.0/app.tgz"` : noter le `sha256` du candidat.
-   - Republier le même fichier, avec son manifeste et son SBOM, dans `raw-release` : `curl -u $USER_PROMO --upload-file app.tgz "$NEXUS/repository/raw-release/service.hra/app/1.0.0/app.tgz"`.
+   - `sha256sum app.tgz`, puis `curl -u $USER_LECTEUR -s "$NEXUS/service/rest/v1/search?repository=raw-candidat&name=service.monex/app/1.0.0/app.tgz"` : noter le `sha256` du candidat.
+   - Republier le même fichier, avec son manifeste et son SBOM, dans `raw-release` : `curl -u $USER_PROMO --upload-file app.tgz "$NEXUS/repository/raw-release/service.monex/app/1.0.0/app.tgz"`.
    - Vérifier que le `sha256` côté release est identique à celui du candidat.
 3. Promotion sans manifeste, puis sans SBOM : tenter avec un candidat incomplet → échec attendu pour chacun.
 
@@ -189,7 +189,7 @@ Règles :
 - Une tentative de republication sur un chemin déjà existant en release est refusée, quel que soit le contenu.
 
 **Démo**
-1. Publier une fois : `curl -u $USER_PROMO --upload-file app.tgz "$NEXUS/repository/raw-release/service.hra/app/1.0.0/app.tgz"` → `201`.
+1. Publier une fois : `curl -u $USER_PROMO --upload-file app.tgz "$NEXUS/repository/raw-release/service.monex/app/1.0.0/app.tgz"` → `201`.
 2. Republier le même chemin, avec un contenu différent : même commande → refus attendu (code exact à constater sur l'instance).
 3. Vérifier que le contenu d'origine n'a pas changé : empreinte identique à celle de S4.
 
@@ -247,7 +247,7 @@ Règles :
 1. Configuration du groupe : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/repositories/docker/group/docker-all"` → `memberNames` contient `docker-release` et `docker-proxy-public`, et ne contient pas `docker-candidat` (**à valider**, endpoint à confirmer).
 2. Tirage via le groupe : `docker pull docker-all.<hôte>/library/alpine:<tag>` → réussi (routage **à confirmer**, voir point 10).
 3. Push refusé sur le proxy : `docker push docker-proxy-public.<hôte>/…` → refus attendu.
-4. Tirage du candidat depuis un déploiement : `docker pull docker-candidat.<hôte>/service.hra/app:<tag>` avec le compte de déploiement → refus attendu (ce compte n'a accès qu'à la release).
+4. Tirage du candidat depuis un déploiement : `docker pull docker-candidat.<hôte>/service.monex/app:<tag>` avec le compte de déploiement → refus attendu (ce compte n'a accès qu'à la release).
 
 ### S12 – Comptes de service et jetons de build
 
@@ -259,9 +259,9 @@ Règles :
 - Aucun compte nominatif dans les scripts de build ; aucun secret en clair dans le dépôt.
 
 **Démo**
-1. Le build publie avec son jeton, pas avec un compte personnel : `curl -u svc-build-service.hra:$TOKEN --upload-file app.tgz "$NEXUS/repository/raw-candidat/service.hra/app/1.0.1/app.tgz"` → `201`.
-2. Le compte de déploiement ne peut pas publier : `curl -u svc-deploy:$TOKEN_DEPLOY -X PUT --upload-file app.tgz "$NEXUS/repository/raw-release/service.hra/app/1.0.1/app.tgz"` → refus.
-3. Le compte de déploiement lit la release : `curl -u svc-deploy:$TOKEN_DEPLOY -I "$NEXUS/repository/raw-release/service.hra/app/1.0.0/app.tgz"` → `200`.
+1. Le build publie avec son jeton, pas avec un compte personnel : `curl -u svc-build-service.monex:$TOKEN --upload-file app.tgz "$NEXUS/repository/raw-candidat/service.monex/app/1.0.1/app.tgz"` → `201`.
+2. Le compte de déploiement ne peut pas publier : `curl -u svc-deploy:$TOKEN_DEPLOY -X PUT --upload-file app.tgz "$NEXUS/repository/raw-release/service.monex/app/1.0.1/app.tgz"` → refus.
+3. Le compte de déploiement lit la release : `curl -u svc-deploy:$TOKEN_DEPLOY -I "$NEXUS/repository/raw-release/service.monex/app/1.0.0/app.tgz"` → `200`.
 4. Rotation : générer un nouveau jeton, mettre à jour le coffre, relancer le build → réussi ; l'ancien jeton → `401`.
 5. Contrôle du dépôt : `grep -rn "password\|token" <dépôt de build>` ne trouve aucun secret en clair.
 
@@ -270,11 +270,11 @@ Règles :
 En tant que responsable de la gouvernance, je veux retrouver tous les artefacts d'une application par son identifiant, dans chaque dépôt hébergé, afin de faire un inventaire et un audit.
 
 Règles :
-- Une recherche sur `service.hra` renvoie tous les artefacts publiés sous ce préfixe, dans le candidat et dans la release, et aucun autre.
+- Une recherche sur `service.monex` renvoie tous les artefacts publiés sous ce préfixe, dans le candidat et dans la release, et aucun autre.
 - Le résultat inclut le chemin, l'empreinte SHA-256 et la version.
 
 **Démo**
-1. Lister les artefacts du candidat : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/assets?repository=raw-candidat"` (suivre le `continuationToken` jusqu'à la fin), puis filtrer les chemins commençant par `service.hra/`.
+1. Lister les artefacts du candidat : `curl -u $USER_LECTEUR "$NEXUS/service/rest/v1/assets?repository=raw-candidat"` (suivre le `continuationToken` jusqu'à la fin), puis filtrer les chemins commençant par `service.monex/`.
 2. Faire la même chose sur `raw-release`.
 3. Comparer au décompte attendu, tenu dans le registre de l'application. Aucun artefact d'une autre application ne doit apparaître.
 
