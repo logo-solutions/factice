@@ -12,7 +12,7 @@
 | Runner | Runner GitHub Actions auto-hébergé sur le Mac Mini | Exécutant | `.github/workflows/ci.yml` |
 | Registry | Nexus (candidat et release) | Référentiel | [registry/](../2-pipeline-livraison/registry/README.md) |
 | Workflows Ansible | Playbooks `deploy-factice-*.yml` | Exécutant | racine du dépôt |
-| CMDB | **NetBox** (vraie CMDB) derrière l'adaptateur `scripts/cmdb/cmdb.sh` | Référentiel | `netbox/`, port 8096 |
+| CMDB | **NetBox** (vraie CMDB) derrière l'adaptateur `bin/cmdb.sh` | Référentiel | projet [`cmdb`](https://github.com/logo-solutions/cmdb) (hors de ce dépôt), port 8096 |
 | Documentation produit | `Docs/` dans Git, lue sur github.com | Référentiel | [INDEX.md](../INDEX.md) |
 | Base de connaissances | fiches `KB-NNN` dans [kb.md](../kb.md), lues sur github.com | Référentiel | `Docs/kb.md` |
 
@@ -99,10 +99,10 @@ Les fichiers `.secrets/*.env` ne sont jamais commités. Les adaptateurs passent 
 ```bash
 # ITSM (faux) et CMDB (NetBox) : voir leurs README
 cd itsm-mock && docker compose --env-file ../.secrets/itsm.env up -d --build
-cd netbox    && docker compose --env-file ../.secrets/netbox.env up -d
+cd ../cmdb   && docker compose --env-file .secrets/netbox.env up -d
 
 # Rapprochement registry / CMDB (flux 11), compte Nexus en lecture seule
-NEXUS_USER=... NEXUS_PASSWORD=... CMDB_TOKEN=... scripts/cmdb/reconcile.sh
+NEXUS_USER=... NEXUS_PASSWORD=... CMDB_TOKEN=... ../cmdb/bin/reconcile.sh
 ```
 
 Les deux services doivent tourner sur le Mac Mini, là où s'exécute le runner : leurs ports sont liés à `127.0.0.1`. S'ils sont arrêtés, le pipeline **échoue** (pas de déploiement sans trace) ; c'est le comportement voulu.
