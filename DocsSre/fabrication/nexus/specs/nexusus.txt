@@ -11,7 +11,7 @@ Variables utilisées dans les démos :
 
 ## Décisions retenues
 
-- **Édition** : Nexus Repository Pro. L'instance actuelle est en édition Community : l'écart est ouvert (voir « Points ouverts », point 1).
+- **Édition** : Nexus Repository Community (décision du 2026-10-20). Les fonctions Pro (Repository Firewall, haute disponibilité) sont hors périmètre.
 - **Application pilote** : identifiant `service.monex`. Il est fixé ; la nomenclature complète viendra plus tard.
 - **Formats du lot 1** : raw et Docker. Maven et npm sont exclus du lot 1 (voir « Points ouverts », point 5).
 - **SBOM** : obligatoire dès le lot 1. Tout artefact promu porte un SBOM CycloneDX.
@@ -20,48 +20,50 @@ Variables utilisées dans les démos :
 - **CMDB** : alimentation reportée. Le lot 1 ne couvre ni le reflet des releases dans la CMDB, ni la relation application-image dorée.
 - **Hors périmètre du lot 1** (infrastructure, traitée à part) : sauvegarde et restauration, supervision au-delà de la sonde de santé, rétention et nettoyage du candidat (sauf la politique décrite en S8).
 
-## État d'avancement (2026-10-19)
+## État d'avancement (2026-10-20)
 
-Instance réelle : conteneur `nexus` (image `sonatype/nexus3:3.96.3`, **édition Community**). Données dans `/Volumes/HDD6/02-Chaude/nexus/nexus-data`. Instance réinitialisée le 2026-10-18 (anciennes données mises de côté). Accès : `127.0.0.1:8081` et Tailscale `100.113.214.55:8081`.
+Instance réelle : conteneur `nexus` (image `sonatype/nexus3:3.96.3`, **édition Community**, retenue le 2026-10-20). Données dans `/Volumes/HDD6/02-Chaude/nexus/nexus-data`. Instance réinitialisée le 2026-10-18 (anciennes données mises de côté). Accès : `127.0.0.1:8081` et Tailscale `100.113.214.55:8081`.
 
 **Dépôts en place** (nom `factice.app` pour l'instant)
 
-| Dépôt | Type | Port | Blob store | Politique de déploiement |
-|---|---|---|---|---|
-| `docker-candidat` | docker hosted | 8082 | `docker-candidat` | Allow redeploy (écart, voir point 13) |
-| `docker-release` | docker hosted | 5002 | `docker-release` | Disable redeploy |
-| `raw-candidat` | raw hosted | HTTP | `raw-candidat` | Allow redeploy |
+| Dépôt | Type | Port | Blob store | Politique de déploiement | Nettoyage |
+|---|---|---|---|---|---|
+| `docker-candidat` | docker hosted | 8082 | `docker-candidat` | Allow redeploy (écart, voir point 13) | `candidat-7-jours` (attachée, vérifié 2026-10-20) |
+| `docker-release` | docker hosted | 5002 | `docker-release` | Disable redeploy (`ALLOW_ONCE`) | aucune |
+| `raw-candidat` | raw hosted | HTTP | `raw-candidat` | Allow redeploy | aucune |
 
 **Comptes en place** (un par usage ; mots de passe dans Bitwarden et `vault.yml`, jamais dans le dépôt)
 
-| Compte | Rôle | Usage |
-|---|---|---|
-| `ci-logo` | `ci-candidat-push` | Build manuel, tests |
-| `svc-promotion` | `svc-promotion` | Promotion candidat vers release |
-| `svc-deploiement` | `svc-deploiement` | Lecture de la release |
-| `svc-build-factice-app` | `svc-build-factice-app` (créé le 2026-10-19) | Build de la CI `factice`. Connexion à tester |
-| `admin` | administrateur | Administration uniquement, jamais dans la CI |
+| Compte | Rôle | Usage | État |
+|---|---|---|---|
+| `svc-build-factice-app` | `svc-build-factice-app` (8 privilèges) | Build de la CI `factice` | Connexion et publication testées le 2026-10-20 ; mot de passe synchronisé vault et GitHub |
+| `ci-logo` | `ci-candidat-push` | Build manuel, tests | Actif ; ne sert plus à la CI |
+| `svc-promotion` | `svc-promotion` | Promotion candidat vers release | Actif |
+| `svc-deploiement` | `svc-deploiement` | Lecture de la release | Actif |
+| `admin` | administrateur | Administration uniquement, jamais dans la CI | Actif |
+
+Le compte `vc-build-factice-app`, créé par erreur de nom le 2026-10-19, a été supprimé.
 
 **Statut des stories**
 
 | Story | Statut | Commentaire |
 |---|---|---|
-| S1 Dépôts et blob stores | Fait | Ports 8082 et 5002 vérifiés (`401` sans compte). Dépôts `raw-release` et `raw-candidat` à compléter pour le format raw (voir S1) |
+| S1 Dépôts et blob stores | Fait | Ports 8082 et 5002 vérifiés. `raw-candidat` en place ; `raw-release` à créer pour le format raw (voir S1) |
 | S2 Chemin et sélecteur `service.monex` | À décider | Pilote Monex ; à appliquer à `factice.app` si on le retient |
-| S3 Rôles et comptes | Partiel | Comptes en place, mais les rôles réels diffèrent de la liste de S3 (voir point 6) |
-| S4 Ingestion manuelle | Fait | Push de test sur le candidat |
+| S3 Rôles et comptes | Partiel | Rôles CI en place et testés ; liste de rôles différente de celle décrite (voir point 6) ; refus anonyme à confirmer dans l'interface |
+| S4 Ingestion manuelle | Fait | Push de test sur le candidat réussi |
 | S5 Manifeste et attestations | À faire | Modèle défini |
 | S6 Promotion candidat vers release | Partiel | `svc-promotion` pousse dans la release ; promotion réelle depuis le candidat non testée |
 | S7 Release immuable | Fait | Second push refusé (`redeploy is not allowed`) |
-| S8 Politique de nettoyage | Partiel | Politique « candidat 7 jours » créée, non attachée au dépôt |
+| S8 Politique de nettoyage | Partiel | Politique « candidat 7 jours » attachée à `docker-candidat` ; tâches planifiées (03 h 00 et 03 h 30) à vérifier au premier passage |
 | S9 Runbook | À faire | À rédiger à partir des étapes réelles |
 | S10 Provenance de la promotion | À faire | Branche `main` protégée à configurer côté Git |
 | S11 Proxy et groupes | À faire | Proxy Docker non créé |
-| S12 Comptes de service | Partiel | Un compte par usage en place ; jetons de build à définir |
+| S12 Comptes de service | Partiel | Un compte par usage en place ; compte de build testé ; jetons de rotation à définir |
 | S13 Recherche par préfixe | À faire | Dépend de S2 |
 | S14 Composant éditeur | À faire | Aucun composant de test |
 
-**Pipeline CI** (`ci.yml`) : le job `build` tourne sur le runner `macmini-factice` (en ligne) et publie image, SBOM et manifeste. Restent à faire, en PR : passer le compte de build à `svc-build-factice-app` (le secret `NEXUS_BUILD_PASSWORD` doit alors être celui de ce compte) et corriger la variable `NEXUS_DOCKER_CANDIDAT` (`localhost:5001` au lieu de `8082`).
+**Pipeline CI** (`ci.yml`, sur `main`) : le job `build` tourne sur le runner `macmini-factice` (en ligne), utilise le compte `svc-build-factice-app` et publie sur `localhost:8082`. La variable de dépôt `NEXUS_DOCKER_CANDIDAT` a été corrigée (`localhost:8082`) le 2026-10-20. Aucune PR n'est nécessaire pour ce point.
 
 ## Epic : Lot 1 – Registry Nexus Pro
 
@@ -305,7 +307,7 @@ Règles :
 
 ## Points ouverts
 
-1. **Édition** : Nexus Pro est retenu, mais l'instance est en Community. À trancher : licence Pro, ou révision de la décision.
+1. **Édition** : clos le 2026-10-20, on reste en Community.
 2. **Promotion raw** : la méthode officielle n'est pas tranchée. Le repli par republication contrôlée est démontrable dès maintenant (S6, étape 2). Reste à savoir si Nexus Pro offre une promotion native pour le raw.
 3. **Immutabilité** : `DENY` bloquerait aussi la première publication, donc la promotion. `ALLOW_ONCE` est le réglage cohérent sur la release, à confirmer sur l'instance Pro.
 4. **Formats absents** : Maven, npm et Python sont hors du lot 1. Il faut une date de reprise pour chacun.
