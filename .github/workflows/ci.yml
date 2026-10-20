@@ -190,7 +190,9 @@ jobs:
           BUILD: ${{ needs.build.outputs.build }}
           REPO_DIR: ${{ github.workspace }}
           PROTECTED_REFS: origin/main
-        run: scripts/nexus/promote.sh | tee -a "$GITHUB_OUTPUT"
+        run: |
+          set -o pipefail
+          scripts/nexus/promote.sh | tee -a "$GITHUB_OUTPUT"
 
       - name: Notes de version (flux 7)
         env:
