@@ -22,7 +22,7 @@ Ce dossier répond à trois questions : **pourquoi** on exige (contexte et enjeu
 | ACC | Contrôle d'accès et ségrégation logique | [10-controle-acces-segregation.md](10-controle-acces-segregation.md) | Premier jet |
 | SBOM | Transparence de la chaîne logicielle (SBOM, vulnérabilités) | à créer | À rédiger. Voir `1-fondations/flux-outils.md`, décision 3 |
 | TRC | Traçabilité et journalisation | à créer | À rédiger |
-| CRY | Chiffrement et gestion des secrets | à créer | À rédiger |
+| CRY | Chiffrement et gestion des secrets | [40-chiffrement-secrets.md](40-chiffrement-secrets.md) | Premier jet (flux et repos ; clés à rédiger) |
 | INT | Intégration et automatisation (API, déploiement) | à créer | À rédiger |
 | EXP | Exploitation, sauvegarde, supervision | à créer | À rédiger |
 | REV | Réversibilité et sortie de contrat | à créer | À rédiger |

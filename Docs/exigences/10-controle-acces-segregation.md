@@ -21,6 +21,7 @@ Une solution doit permettre de **cloisonner** les données et les actions par p�
 | ACC-09 | Export des droits pour revue | 0.1 | DEVRAIT | TST |
 | ACC-10 | Accès du personnel de l'éditeur | 0.1 | DOIT | CTR |
 | ACC-11 | Isolation entre clients de l'éditeur | 0.1 | DOIT | ATT |
+| ACC-12 | Authentification par OpenID Connect | 0.1 | DOIT | TST |
 
 ## Exigences
 
@@ -202,6 +203,34 @@ Une solution doit permettre de **cloisonner** les données et les actions par p�
 | Source | ISO 27001:2022 A.5.23 (services cloud) ; ISO 27017 |
 | Version | 0.1 |
 | Statut | brouillon |
+
+### ACC-12 — Authentification par OpenID Connect
+
+**Énoncé.** La solution DOIT authentifier ses utilisateurs par OpenID Connect auprès du fournisseur d'identité de l'organisation, avec le flux code d'autorisation protégé par PKCE et une validation complète du jeton d'identité reçu.
+
+**Pourquoi.** OpenID Connect est le protocole d'authentification déléguée attendu pour relier la solution à l'identité unique de l'organisation. Une implémentation approximative, par exemple un jeton accepté sans vérifier son émetteur ou son destinataire, permet de se faire passer pour un autre utilisateur : le protocole ne protège que s'il est appliqué entièrement.
+
+| | |
+|---|---|
+| Priorité | DOIT |
+| Applicabilité | COTS, SaaS, low code |
+| Preuve attendue | TST : on rejoue des jetons d'identité invalides (signature falsifiée, mauvais émetteur, mauvais destinataire, expiré, `nonce` différent) et chacun est refusé. DEM : connexion complète via notre fournisseur d'identité, avec flux code d'autorisation et PKCE observés |
+| Critère d'acceptation | Le flux code d'autorisation est utilisé avec PKCE ; les flux implicite et par mot de passe ne le sont pas. Le jeton d'identité n'est accepté que si sa signature est valide avec les clés de l'émetteur, si `iss` correspond exactement à l'émetteur préconfiguré, si `aud` contient l'identifiant du client, s'il n'est pas expiré et si `nonce` correspond à celui de la requête. L'utilisateur est identifié par la paire émetteur et `sub`, jamais par son adresse de messagerie ou son nom |
+| Réserve | Précise le volet OpenID Connect d'ACC-05, qui admet aussi SAML : à aligner (voir la PR). La preuve par DOC seule ne suffit pas, le défaut classique est une validation incomplète que seul un jeton invalide révèle. Les contrôles ASVS sur le serveur d'autorisation (10.4, 10.6) visent notre fournisseur d'identité, pas la solution évaluée : ils ne sont pas repris ici |
+| Source | ISO 27001:2022 A.5.16, A.8.5 ; OpenID Connect Core 1.0 §3.1.3.7 ; RFC 9700 (OAuth 2.0 Security BCP, janvier 2025) ; OWASP ASVS 5.0 : 10.1.2, 10.2.1, 10.2.2, 10.5.1, 10.5.2, 10.5.3, 10.5.4 |
+| Version | 0.1 |
+| Statut | brouillon |
+
+## Sources consultées pour ACC-12
+
+| Référentiel | Version lue | Ce qui est repris | Vérification |
+|---|---|---|---|
+| OWASP ASVS | 5.0, chapitre V10 (OAuth et OIDC) | 10.5.1 (`nonce`), 10.5.2 (`sub`), 10.5.3 (émetteur préconfiguré), 10.5.4 (`aud`), 10.2.1 (PKCE ou `state`), 10.2.2 (mix-up), 10.1.2 (réponse liée à la session initiatrice) | Texte officiel lu |
+| OpenID Connect Core 1.0 | §3.1.3.7, validation du jeton d'identité (`iss`, `aud`, `exp`, `nonce`, signature) | Règles de validation | Site officiel et résumé lus, texte intégral non relu |
+| RFC 9700, OAuth 2.0 Security BCP | janvier 2025 | PKCE pour le flux code, flux implicite et par mot de passe à proscrire | Résumés de sources secondaires, RFC non relue |
+| ISO/IEC 27001:2022 | A.5.16 (gestion des identités), A.8.5 (authentification sécurisée) | Contrôles déjà cités par ACC-05 | Norme payante, non relue |
+
+NIST SP 800-63C-4 (fédération et assertions, juillet 2025) existe et traite du sujet, mais son texte n'a pas été lu : elle n'est pas citée.
 
 ## À instruire
 
