@@ -1,0 +1,10 @@
+﻿Code;Référence;URL;État du lien
+RECYF;ANSSI, Référentiel Cyber France (ReCyF), version de travail 2.5, 17/03/2026;https://messervices.cyber.gouv.fr/documents-ressources/20260317_NIS_V2_Suivi%20des%20modifications%20ReCyF%20v2.4%20vers%20v2.5-vfinale.pdf;Vérifiée : document consulté
+DEVSECOPS;ANSSI, Les essentiels DevSecOps, v1.0, 02/2024;https://messervices.cyber.gouv.fr/documents-guides/anssi_essentiels_devsecops_v1.0.pdf;Vérifiée : URL affichée à l'écran lors de l'atelier
+ADMIN;ANSSI, Recommandations relatives à l'administration sécurisée des SI (PA-022);https://cyber.gouv.fr/sites/default/files/2018/10/guide_anssi_secure_admin_is_pa_022_en_v2.pdf;Vérifiée par recherche, mais version anglaise v2 : rechercher la version française en vigueur sur cyber.gouv.fr
+SLSA;OpenSSF, SLSA v1.0, exigences de build et de provenance;https://slsa.dev/spec/v1.0/requirements;Non vérifiée
+RB;Projet Reproducible Builds;https://reproducible-builds.org/;Non vérifiée
+SSDF;NIST SP 800-218, Secure Software Development Framework;https://csrc.nist.gov/pubs/sp/800/218/final;Non vérifiée
+NIST-CICD;NIST SP 800-204D, sécurité de la chaîne logicielle dans les pipelines CI/CD;https://csrc.nist.gov/pubs/sp/800/204/d/final;Non vérifiée
+ESF;NSA, CISA, ODNI, Securing the Software Supply Chain : Recommended Practices for Developers, 09/2022;https://media.defense.gov/2022/Sep/01/2003068942/-1/-1/0/ESF_SECURING_THE_SOFTWARE_SUPPLY_CHAIN_DEVELOPERS.PDF;Vérifiée par recherche (aussi publiée par la CISA)
+CR;Compte rendu d'atelier interne (règles SSI formelles et/ou informelles);;Document interne, sans URL
