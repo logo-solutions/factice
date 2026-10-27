@@ -1,0 +1,21 @@
+﻿N°;Objectif de sécurité;Applicable à;Dirigeant;RSSI;DSI / Exploitation;Core team industrialisation;RH;Achats;Services généraux;Rôle de la core team
+1;Recensement des systèmes d'information;EI et EE;A;C;R;I;;;;
+2;Mise en œuvre d'un cadre de gouvernance de la sécurité numérique;EI et EE;A;R;C;I;I;I;I;
+3;Maîtrise de l'écosystème;EI et EE;;A;R;C;;R;;Core team : sous-traitants intervenant sur la chaîne (batch HR Access).
+4;Intégration de la sécurité numérique dans la gestion des ressources humaines;EI et EE;I;A;I;I;R;;;
+5;Maîtrise des systèmes d'information;EI et EE;;C;A/R;R;;;;Core team : correctifs livrés par la chaîne CI/CD, SBOM, sources officielles.
+6;Maîtrise des accès physiques aux locaux;EI et EE;;C;C;;;;A/R;
+7;Sécurisation de l'architecture des systèmes d'information;EI et EE;;C;A/R;C;;;;
+8;Sécurisation des accès distants aux systèmes d'information;EI et EE;;C;A/R;I;;;;
+9;Protection des systèmes d'information contre les codes malveillants;EI et EE;;C;A/R;C;;;;
+10;Gestion des identités et des accès des utilisateurs aux systèmes d'information;EI et EE;;C;A/R;R;C;;;Core team : comptes de service des pipelines, droits Nexus et GitLab.
+11;Maîtrise de l'administration des systèmes d'information;EI et EE;;C;A/R;R;;;;Core team : déploiements en production traités comme actions d'administration.
+12;Identification et réaction aux incidents de sécurité;EI et EE;I;A/R;R;I;;;;
+13;Continuité et reprise d'activité;EI et EE;;C;A/R;R;;;;Core team : sauvegarde et restauration de Nexus et GitLab.
+14;Réaction aux crises d'origine cyber;EI et EE;A;R;R;I;;;;
+15;Exercices, tests et entraînements;EI et EE;I;A/R;C;I;;;;
+16;Mise en œuvre d'une approche par les risques;EE uniquement;A;R;C;C;;;;
+17;Audit de la sécurité des systèmes d'information;EE uniquement;I;A/R;C;C;;;;
+18;Sécurisation de la configuration des ressources des systèmes d'information;EE uniquement;;C;A/R;R;;;;Core team : golden images et runners minimaux.
+19;Administration des systèmes d'information depuis des ressources dédiées;EE uniquement;;C;A/R;R;;;;Core team : runner de provisionnement dans le SIA.
+20;Supervision de la sécurité des systèmes d'information;EE uniquement;;A/R;R;C;;;;Core team : journaux de pipeline et d'exécution Ansible à transmettre à la supervision.

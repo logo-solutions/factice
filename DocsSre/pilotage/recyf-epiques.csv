@@ -1,0 +1,20 @@
+﻿Code;Socle;Épique;URL GitLab;Nb mesures ReCyF;Mesures ReCyF couvertes
+C1;Cadrage;État des lieux des pratiques;;0;Aucune (pas d'exigence de sécurité propre)
+C2;Cadrage;Grille de conformité applicative;;2;2.C.1-EI/EE, 2.C.3-EI/EE
+N1;Socle Nexus;Classification des artefacts;;2;5.B.8-EI/EE, 9.7-EI/EE
+N2;Socle Nexus;Arborescence et nommage des repositories;;0;Aucune (pas d'exigence de sécurité propre)
+N3;Socle Nexus;Versioning et immuabilité;;1;5.B.4-EI/EE
+N4;Socle Nexus;Droits et rétention;;5;10.A.1-EI/EE, 10.A.6-EI/EE, 10.C.2-EI/EE, 10.C.3-EI/EE, 10.C.4-EI/EE
+N5;Socle Nexus;Mise en service Nexus;;7;5.B.8-EI/EE, 7.A.3-EE, 7.A.4-EE, 7.B.3-EI/EE, 13.1-EI/EE, 13.2-EI/EE, 13.3-EI/EE
+N6;Socle Nexus;Golden images;;4;5.B.5-EE, 5.B.7-EI/EE, 18.1-EE, 18.3-EE
+CI1;Socle CI/CD;Infrastructure de build;;5;7.A.4-EE, 11.A.1-EI/EE, 18.1-EE, 19.1-EE, 19.8-EE
+CI2;Socle CI/CD;Template de pipeline de référence;;0;Aucune (pas d'exigence de sécurité propre)
+CI3;Socle CI/CD;Traçabilité et SBOM;;3;5.A.1-EI/EE, 20.4-EE, 20.5-EE
+CI4;Socle CI/CD;Contrôles de sécurité dans le pipeline;;3;5.B.3-EI/EE, 5.B.4-EI/EE, 9.7-EI/EE
+CI5;Socle CI/CD;Accès et secrets du pipeline;;5;10.A.1-EI/EE, 10.A.2-EI/EE, 10.B.4-EI/EE, 10.C.2-EI/EE, 11.A.1-EI/EE
+A1;Socle déploiement Ansible;Standard des rôles Ansible;;1;18.3-EE
+A2;Socle déploiement Ansible;Inventaires et environnements;;3;7.A.3-EE, 7.A.4-EE, 19.8-EE
+A3;Socle déploiement Ansible;Configuration applicative versionnée;;2;18.3-EE, 18.4-EE
+A4;Socle déploiement Ansible;Playbook de déploiement;;2;5.B.4-EI/EE, 11.A.1-EI/EE
+A5;Socle déploiement Ansible;Secrets de déploiement;;3;10.B.2-EI/EE, 10.B.3-EI/EE, 10.B.4-EI/EE
+A6;Socle déploiement Ansible;Plateforme d'exécution;;6;11.A.1-EI/EE, 11.A.6-EE, 11.A.7-EE, 19.1-EE, 20.4-EE, 20.5-EE
