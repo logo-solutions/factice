@@ -1,0 +1,661 @@
+# Board GitLab — Industrialisation (Nexus, CI/CD, Ansible)
+
+## Contexte
+
+- GitLab on-premise, édition **Ultimate** (confirmée, voir § 0).
+- Core team : 5 personnes à temps partiel. C'est la seule équipe membre du projet.
+- Le board est **consultable par la hiérarchie**. Les équipes applicatives n'y figurent pas.
+- Aucune échéance imposée. La hiérarchie suit les **livrables**.
+- Trois phases : **étude et socle** (pratiques à l'échelle de l'entreprise, construction de Nexus, de la CI/CD et d'Ansible) → **pilote** (projet A) → **mise à l'échelle** (~150 applications de la direction).
+- Le board pilote **le travail de la core team** : il ne suit pas la migration de chaque application.
+
+---
+
+## 0. Édition GitLab : Ultimate
+
+Conséquences :
+- **Hiérarchie d'épiques disponible** : phase › socle › épiques (§ 5). Pas besoin de labels `phase::`.
+- **Scanners de sécurité intégrés** (code, dépendances, images, secrets) : l'épique CI/CD « Contrôles de sécurité » consiste à les activer dans le template, pas à les construire.
+- **SBOM au format CycloneDX** générés par l'analyse des dépendances : à comparer avec le script SBOM maison avant de le développer (étude dédiée, § 11).
+- ⚠️ Les scanners tournent à partir d'images publiées sur le registre de GitLab. Si le réseau est isolé, il faut les importer en interne (vérification, § 11).
+
+---
+
+## 1. Arborescence du groupe
+
+```
+<groupe-parent>/
+└── industrialisation/          ← labels, boards, épiques et wiki ici
+    ├── backlog                 ← issues sans code + templates d'issue
+    ├── ci-templates            ← à créer quand la 1re issue de création démarre
+    ├── nexus-config            ← idem
+    └── ansible-<…>             ← idem
+```
+
+- [ ] Créer le projet `backlog` : *New project › Create blank project*, en cochant *Initialize with README*.
+- [ ] Ne pas créer de dépôts vides à l'avance. Chaque dépôt naît avec sa première issue de création.
+- [ ] Vérifier que les projets utiles sont bien **sous** `industrialisation/`. Un board de groupe ne voit que le groupe et ses sous-groupes.
+  - Pour un projet situé ailleurs : le transférer (vérifier d'abord les `include: project:` et les scripts qui référencent son chemin), ou monter le board au groupe parent commun et le filtrer par label.
+
+### Choix du projet à la création d'une issue
+
+| Nature de l'issue | Projet |
+|---|---|
+| Produit du code ou de la config versionnée | Le dépôt concerné (`ci-templates`, `nexus-config`, …). Une MR avec `Closes #N` ferme l'issue. |
+| Cadrage, étude, décision, tâche sans code | `backlog` |
+| Pilote ou vague sur une application | `backlog`, avec `[nom-app]` dans le titre |
+
+En cas d'erreur, *⋮ › Move issue* déplace l'issue. Les labels de groupe sont conservés.
+
+---
+
+## 2. Labels de groupe
+
+Où : *Groupe `industrialisation` › Manage › Labels › New label*.
+Le séparateur `::` rend les labels d'une même famille mutuellement exclusifs.
+
+> Un board de groupe ne peut créer des listes qu'à partir de **labels de groupe**. Un label de projet existant se convertit par *⋮ › Promote to group label*.
+
+### Workflow, qui sert de colonnes
+- [ ] `status::ready` : priorisé, prêt à être pris
+- [ ] `status::doing` : en cours, porteur assigné
+- [ ] `status::review` : à valider et à documenter
+
+### Type, qui sert de filtre
+- [ ] `type::cadrage` : entretiens et état des lieux. Pas de question unique à trancher ; l'issue se ferme par un compte rendu.
+- [ ] `type::étude` : une question à trancher, qui se ferme par une décision écrite
+- [ ] `type::création` : construire ce qui n'existe pas
+- [ ] `type::amélioration` : modifier l'existant
+
+### Domaine, qui sert de filtre
+- [ ] `domaine::registry` : Nexus
+- [ ] `domaine::cicd` : pipelines, traçabilité et SBOM
+- [ ] `domaine::deploiement` : Ansible et configuration
+
+### Drapeau
+- [ ] `bloqué` : la carte reste dans sa colonne
+
+### À nettoyer
+- [ ] Migrer l'ancien label « En cours » : *Groupe › Plan › Issues › Bulk edit*, ajouter `status::doing`, retirer « En cours », puis supprimer l'ancien label.
+
+### À ne pas faire
+- Pas de labels `app::` : à 150 applications, ils explosent. Utiliser `[nom-app]` dans le titre.
+
+---
+
+## 3. Issue board (vue opérationnelle de la core team)
+
+Où : *Groupe › Plan › Issue boards › New board*.
+
+- [ ] Nom : **Kanban industrialisation**
+- [ ] Listes, de gauche à droite : `Open` (natif), `status::ready`, `status::doing`, `status::review`, `Closed` (natif)
+- [ ] Sur la liste `status::doing`, ouvrir l'engrenage et fixer le *Work in progress limit* à **3**
+- [ ] Dans l'en-tête du board, choisir *Group by › Epic* (swimlanes par chantier)
+
+---
+
+## 4. Epic board (vitrine des livrables pour la hiérarchie)
+
+Où : *Groupe › Plan › Epic boards*.
+
+- [ ] Nom : **Livrables industrialisation**
+- [ ] Listes : `Open`, `status::doing`, `Closed`
+- [ ] La colonne `Closed` est la liste de ce qui a été livré
+
+### Articulation avec l'issue board
+- Chaque issue est rattachée à une épique parente, depuis la barre latérale de l'issue.
+- Les colonnes **ne sont pas synchronisées** entre les deux boards :
+  - l'épique passe en `status::doing` quand sa première issue démarre ;
+  - l'épique est fermée quand sa dernière issue est fermée **et** que le livrable est validé.
+
+---
+
+## 5. Épiques
+
+### Règles de nommage
+- Une épique = **un livrable** qui a une fin. Pas de thème permanent du type « CI/CD » ou « Registry » : un thème est un label `domaine::`.
+- Le titre doit se comprendre **sans contexte**, puisque la hiérarchie le lit.
+- Pas plus de 2 ou 3 épiques en cours en même temps (voir l'ordre de démarrage plus bas).
+
+### Description type d'une épique
+```markdown
+## Story
+En tant que …, je veux …, afin de …
+
+## Livrable
+<!-- Ce qui est produit, en une phrase compréhensible par la hiérarchie -->
+
+## Lien vers le livrable
+<!-- Page wiki, dépôt, release, rapport -->
+
+## Critère de fermeture
+<!-- Quand considère-t-on le livrable validé ? -->
+```
+
+### Hiérarchie des épiques
+
+```
+Phase 1 — Étude et socle
+├── Cadrage                      (2 épiques)
+├── Socle Nexus                  (6 épiques)
+├── Socle CI/CD                  (5 épiques)
+└── Socle déploiement Ansible    (6 épiques)
+Phase 2 — Pilote                 (1 épique)
+Phase 3 — Mise à l'échelle       (1 épique par vague)
+```
+
+Les épiques intermédiaires (« Socle Nexus », etc.) se ferment quand toutes leurs enfants sont fermées. Ce ne sont donc pas des thèmes permanents.
+
+### Niveaux de travail
+
+**Épique** (livrable) › **issue** (quelques jours, visible sur le board) › **tâche** (*Child items › New task* dans une issue).
+
+Règle pour choisir :
+- **Doit être visible en revue hebdo** → une issue. Les tâches n'apparaissent pas comme cartes sur l'issue board (à vérifier sur la version installée).
+- **Étape interne d'une issue, même porteur** → une checklist dans la description.
+- **Sous-étape portée par quelqu'un d'autre** → une tâche, avec son propre assigné.
+
+Avec des issues de quelques jours, utiliser les tâches avec parcimonie.
+
+---
+
+### Phase 1 — Cadrage
+
+Pas de label `domaine::` (transverse).
+
+#### État des lieux des pratiques de livraison et de déploiement
+
+**Exigences OF** : OF-37
+
+- **Livrable** : synthèse des entretiens, avec les constats et les irritants classés par domaine.
+- **Issues** :
+  - une issue « Entretiens état des lieux » (`type::cadrage`), avec **une tâche par entretien**, assignée à celui qui le mène et fermée quand le compte rendu est déposé ;
+  - une issue de synthèse, qui ferme l'épique.
+- **Première épique à démarrer** : elle nourrit toutes les études.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-37 : Inventaire des assets complété par les droits, secrets, flux et référents techniques et métier.
+
+#### Grille de conformité applicative
+
+**Exigences OF** : OF-38, OF-39
+
+- **Livrable** : la définition d'une application « conforme », par exemple : livrée par pipeline, stockée dans Nexus, déployée par Ansible.
+- Sert à vérifier objectivement le pilote et chaque vague.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-38 : Intégrer les chemins de compromission (poste développeur, runner, sous-traitance) dans l'analyse.
+- [ ] OF-39 : Analyse par SI validée par le RSSI, risques résiduels acceptés par écrit.
+
+---
+
+### Phase 1 — Socle Nexus
+
+Label : `domaine::registry`.
+
+**Story de l'épique parente « Socle Nexus »**
+> **En tant qu'**équipe applicative,
+> **je veux** un dépôt Nexus unique et fiable pour publier et récupérer mes artefacts,
+> **afin de** ne plus dépendre de stockages locaux ni de sources externes.
+
+**Ordre de démarrage** : 1 → 2 → 3 (études qui alimentent le standard Nexus). Les épiques 4 et 6 en découlent. La 5 peut démarrer en parallèle dès le départ.
+
+#### 1. Classification des artefacts
+
+**Exigences OF** : OF-26, OF-27, OF-63
+
+Catégories (marché, maison, partenaire, configuration, scripts, matériel ou logiciel) et traitement de chacune. C'est le socle de tout le reste.
+> **En tant que** core team industrialisation,
+> **je veux** une classification des artefacts avec, pour chaque catégorie, sa règle de stockage et de cycle de vie,
+> **afin que** les 150 applications rangent leurs livrables de la même façon dans Nexus.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-26 : Import initial depuis les sources officielles, puis distribution par Nexus uniquement.
+- [ ] OF-27 : Transfert contrôlé avec antivirus et contrôle d'intégrité, journal conservé.
+- [ ] OF-63 : Vérifier version et provenance à l'entrée, comme pour OF-26.
+
+#### 2. Arborescence et nommage des repositories
+
+**Exigences OF** : OF-02, OF-05, OF-26
+
+Par service ou par domaine métier, avec les conventions de nommage, y compris pour les artefacts éditeur.
+> **En tant qu'**équipe applicative,
+> **je veux** savoir sans ambiguïté où publier mes artefacts et comment les nommer,
+> **afin de** retrouver n'importe quelle version, la mienne ou celle d'une autre équipe, en quelques secondes.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-02 : Séparation logique (VLAN, comptes, tags de runner) entre intégration et production ; physique pour la production si le RSSI la retient.
+- [ ] OF-05 : Matrice de flux par brique, versionnée dans DocsSre/securite.
+- [ ] OF-26 : Import initial depuis les sources officielles, puis distribution par Nexus uniquement.
+
+#### 3. Versioning et immuabilité
+
+**Exigences OF** : OF-22, OF-45, OF-52, OF-61, OF-62
+
+Règle de version et garantie qu'un artefact publié ne change jamais.
+> **En tant que** responsable de production,
+> **je veux** qu'une version publiée ne puisse jamais être modifiée,
+> **afin d'**être certain que ce qui est déployé en prod est exactement ce qui a été testé.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-22 : Tags de version signés, signature vérifiée par le playbook avant déploiement.
+- [ ] OF-45 : Attestation signée, vérifiée par le playbook de déploiement.
+- [ ] OF-52 : Signature réservée aux pipelines de tags protégés, clé dans un coffre.
+- [ ] OF-61 : Empreinte SHA256 publiée avec chaque release.
+- [ ] OF-62 : Archivage dans Nexus avec SBOM, rétention définie.
+
+#### 4. Droits et rétention
+
+**Exigences OF** : OF-33, OF-34, OF-35, OF-36, OF-54, OF-60
+
+Rôles par repository et règles de conservation entre dev et prod.
+> **En tant qu'**administrateur Nexus,
+> **je veux** des rôles par repository et des règles de conservation automatiques,
+> **afin que** chacun n'accède qu'à ce qui le concerne, et que les versions de prod soient conservées sans que le stockage ne déborde.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-33 : Comptes individuels pour les personnes ; un compte de service nommé par processus.
+- [ ] OF-34 : Rôles Nexus par repository : lecture, publication, déploiement.
+- [ ] OF-35 : Revue annuelle inscrite dans le registre, avec date de dernière revue.
+- [ ] OF-36 : Liste des prestataires dans la matrice de flux, avec clauses contractuelles de sécurité.
+- [ ] OF-54 : Branches protégées et revue obligatoire avant fusion.
+- [ ] OF-60 : Dépôts privés, accès par projet.
+
+#### 5. Mise en service de la plateforme
+
+**Exigences OF** : OF-01, OF-02, OF-03, OF-04, OF-05, OF-06, OF-07, OF-26, OF-43, OF-59
+
+Installation on-premise, sauvegarde, supervision. Seule épique de création pure du socle Nexus.
+> **En tant que** core team,
+> **je veux** une instance Nexus on-premise sauvegardée et supervisée,
+> **afin que** toutes les équipes puissent s'appuyer dessus sans craindre de perdre leurs artefacts.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-01 : Un sous-système par environnement et par brique (build, registre, exécution, production), reporté dans l'inventaire.
+- [ ] OF-02 : Séparation logique (VLAN, comptes, tags de runner) entre intégration et production ; physique pour la production si le RSSI la retient.
+- [ ] OF-03 : Deux runners avec tags distincts et deux Nexus (ou deux dépôts étanches) ; aucun orchestrateur exposé sur Internet.
+- [ ] OF-04 : N'ouvrir que ces trois flux, chacun listé dans la matrice de flux.
+- [ ] OF-05 : Matrice de flux par brique, versionnée dans DocsSre/securite.
+- [ ] OF-06 : Règles deny par défaut entre zones, testées depuis une VM applicative.
+- [ ] OF-07 : Revue annuelle outillée : export des règles et comparaison avec la matrice de flux.
+- [ ] OF-26 : Import initial depuis les sources officielles, puis distribution par Nexus uniquement.
+- [ ] OF-43 : Sauvegarde Nexus et snapshots ICAT, restauration testée une fois par an, copie hors ligne.
+- [ ] OF-59 : Installation et configuration dans des rôles Ansible versionnés.
+
+#### 6. Golden images
+
+**Exigences OF** : OF-18, OF-19, OF-20
+
+Images de base partagées, cycle de mise à jour et propriétaire.
+> **En tant qu'**équipe applicative,
+> **je veux** des images de base durcies, maintenues et versionnées,
+> **afin de** ne plus construire ni sécuriser moi-même mes images de base de données ou de middleware.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-18 : Liste de référence par type de machine (runner, VM ICAT, cloud privé), contrôle d'écart, image minimale.
+- [ ] OF-19 : Rôles Ansible de durcissement référencés aux recommandations ANSSI et éditeur.
+- [ ] OF-20 : Appliquer le guide ANSSI GNU/Linux via un rôle Ansible testé.
+
+---
+
+### Phase 1 — Socle CI/CD
+
+Label : `domaine::cicd`.
+
+**Ordre de démarrage** : les runners en premier, rien ne tourne sans eux. Le template de pipeline ne démarre qu'une fois l'arborescence et le versioning Nexus tranchés, puisque le pipeline publie dedans.
+
+#### 1. Infrastructure de build
+
+**Exigences OF** : OF-02, OF-03, OF-14, OF-15, OF-17, OF-18, OF-40, OF-46, OF-48, OF-50, OF-51, OF-58, OF-59, OF-66
+
+Runners GitLab on-premise.
+> **En tant qu'**équipe applicative,
+> **je veux** des runners disponibles et maîtrisés,
+> **afin que** mes pipelines tournent sans dépendre d'une machine personnelle ni d'un service externe.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-02 : Séparation logique (VLAN, comptes, tags de runner) entre intégration et production ; physique pour la production si le RSSI la retient.
+- [ ] OF-03 : Deux runners avec tags distincts et deux Nexus (ou deux dépôts étanches) ; aucun orchestrateur exposé sur Internet.
+- [ ] OF-14 : Réseau d'administration séparé ; seuls le poste d'administration et le runner de production y figurent.
+- [ ] OF-15 : Aucune route directe entre le poste d'administration et les environnements de développement.
+- [ ] OF-17 : Runner éphémère (VM ou conteneur) recréé depuis Ansible à fréquence fixée, date de recréation tracée.
+- [ ] OF-18 : Liste de référence par type de machine (runner, VM ICAT, cloud privé), contrôle d'écart, image minimale.
+- [ ] OF-40 : GitLab et Nexus on-premise ; aucun code ni donnée sur un SaaS public.
+- [ ] OF-46 : Runners on-premise dédiés, hébergés sur le réseau de l'entreprise.
+- [ ] OF-48 : VM ou conteneur jetable par job.
+- [ ] OF-50 : Runner de build sans droits d'administration ; droits élevés uniquement au job de déploiement.
+- [ ] OF-51 : Templates imposés, attestations signées par le runner de confiance.
+- [ ] OF-58 : Environnement de build distinct, documenté dans l'inventaire.
+- [ ] OF-59 : Installation et configuration dans des rôles Ansible versionnés.
+- [ ] OF-66 : Durcissement des runners par rôle Ansible (voir OF-19).
+
+#### 2. Template de pipeline de référence
+
+**Exigences OF** : OF-41, OF-54
+
+Build, tests, packaging, publication dans Nexus.
+> **En tant qu'**équipe applicative,
+> **je veux** un pipeline standard que j'inclus en quelques lignes,
+> **afin de** ne pas réinventer ma chaîne de build et de livrer comme toutes les autres équipes.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-41 : Règles intégrées au template et à la revue de code.
+- [ ] OF-54 : Branches protégées et revue obligatoire avant fusion.
+
+#### 3. Traçabilité et SBOM
+
+**Exigences OF** : OF-11, OF-24, OF-42, OF-44, OF-45, OF-47, OF-49, OF-51, OF-62, OF-65
+
+Script d'upload, SBOM, empreintes, informations de build. Ultimate génère déjà des SBOM CycloneDX via l'analyse des dépendances : la première issue est l'étude « SBOM : natif GitLab ou script maison ? ».
+> **En tant que** responsable sécurité,
+> **je veux** savoir pour chaque artefact ce qu'il contient, qui l'a construit et à partir de quel commit,
+> **afin de** répondre à un audit ou à une alerte de vulnérabilité en quelques minutes.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-11 : Export des journaux du job vers le point central pendant l'exécution.
+- [ ] OF-24 : SBOM produit à chaque build, avec recherche d'un composant sur l'ensemble.
+- [ ] OF-42 : Journaux de production conservés trois mois au minimum, copie hors ligne.
+- [ ] OF-44 : Provenance générée par le pipeline au niveau SLSA 1.
+- [ ] OF-45 : Attestation signée, vérifiée par le playbook de déploiement.
+- [ ] OF-47 : Clé de signature hors de portée des étapes de build (variables protégées, runner dédié).
+- [ ] OF-49 : Provenance publiée avec l'artefact dans Nexus.
+- [ ] OF-51 : Templates imposés, attestations signées par le runner de confiance.
+- [ ] OF-62 : Archivage dans Nexus avec SBOM, rétention définie.
+- [ ] OF-65 : SBOM CycloneDX généré à chaque livraison.
+
+#### 4. Contrôles de sécurité dans le pipeline
+
+**Exigences OF** : OF-23, OF-25, OF-28, OF-29, OF-53, OF-55, OF-56, OF-57, OF-63, OF-64
+
+Activation dans le template des scanners intégrés à Ultimate (code, dépendances, images, secrets) et définition des seuils bloquants. Prérequis : images des analyseurs disponibles en interne si le réseau est isolé.
+> **En tant que** responsable sécurité,
+> **je veux** que chaque build soit analysé automatiquement,
+> **afin qu'**aucune vulnérabilité critique ni aucun secret ne parte en production sans être vu.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-23 : Playbook avec retour arrière testé ; déploiement intégration puis production sans délai injustifié.
+- [ ] OF-25 : Scan des dépendances bloquant pour les vulnérabilités critiques.
+- [ ] OF-28 : Tests automatisés : lint IaC, scan d'image, analyse statique, secrets.
+- [ ] OF-29 : Alerte automatique sur le SBOM (OF-24) lors de la publication d'un bulletin.
+- [ ] OF-53 : Push protection GitLab, gitleaks, signature des commits.
+- [ ] OF-55 : Pipelines des contributeurs externes soumis à approbation.
+- [ ] OF-56 : Le playbook refuse tout artefact non signé ou non issu du build sécurisé ; analyse d'image au build.
+- [ ] OF-57 : gitleaks avant ajout et en CI.
+- [ ] OF-63 : Vérifier version et provenance à l'entrée, comme pour OF-26.
+- [ ] OF-64 : Canal de signalement et traitement suivi dans GitLab.
+
+#### 5. Accès et secrets du pipeline
+
+**Exigences OF** : OF-10, OF-12, OF-13, OF-30, OF-31, OF-32, OF-33, OF-47, OF-50, OF-52, OF-53
+
+Identifiants vers Nexus, variables protégées.
+> **En tant que** core team,
+> **je veux** que les pipelines s'authentifient sans identifiants en clair,
+> **afin que** seule la CI puisse publier dans les repositories de production.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-10 : Un compte de service par usage ; jetons courts générés à la demande, jamais stockés en clair.
+- [ ] OF-12 : Comptes d'administration distincts des comptes personnels, sans navigation ni messagerie.
+- [ ] OF-13 : Registre tenu à jour dans DocsSre, droits attribués par groupe, date de dernière revue par compte.
+- [ ] OF-30 : Un vault Ansible par application, avec un vault ID et un mot de passe par environnement.
+- [ ] OF-31 : Secrets lus uniquement par le runner concerné, variables protégées.
+- [ ] OF-32 : MFA obligatoire sur GitLab ; signature des commits sur les dépôts désignés.
+- [ ] OF-33 : Comptes individuels pour les personnes ; un compte de service nommé par processus.
+- [ ] OF-47 : Clé de signature hors de portée des étapes de build (variables protégées, runner dédié).
+- [ ] OF-50 : Runner de build sans droits d'administration ; droits élevés uniquement au job de déploiement.
+- [ ] OF-52 : Signature réservée aux pipelines de tags protégés, clé dans un coffre.
+- [ ] OF-53 : Push protection GitLab, gitleaks, signature des commits.
+
+---
+
+### Phase 1 — Socle déploiement Ansible
+
+Label : `domaine::deploiement`.
+
+**Ordre de démarrage** : trancher tôt la plateforme d'exécution (épique 6), en issue d'étude, car elle conditionne l'outillage du playbook de déploiement (épique 4).
+
+#### 1. Standard des rôles Ansible
+
+**Exigences OF** : OF-19, OF-27
+
+Structure, conventions, lint, tests.
+> **En tant qu'**équipe applicative,
+> **je veux** des rôles écrits selon une structure commune et testés,
+> **afin de** réutiliser ceux des autres équipes au lieu de réécrire les miens.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-19 : Rôles Ansible de durcissement référencés aux recommandations ANSSI et éditeur.
+- [ ] OF-27 : Transfert contrôlé avec antivirus et contrôle d'intégrité, journal conservé.
+
+#### 2. Inventaires et environnements
+
+**Exigences OF** : OF-01, OF-02, OF-15
+
+Dev, recette, prod ; variables par environnement.
+> **En tant qu'**équipe applicative,
+> **je veux** un inventaire par environnement et une règle claire pour les variables,
+> **afin de** déployer la même version partout en ne changeant que la configuration.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-01 : Un sous-système par environnement et par brique (build, registre, exécution, production), reporté dans l'inventaire.
+- [ ] OF-02 : Séparation logique (VLAN, comptes, tags de runner) entre intégration et production ; physique pour la production si le RSSI la retient.
+- [ ] OF-15 : Aucune route directe entre le poste d'administration et les environnements de développement.
+
+#### 3. Configuration applicative versionnée
+
+**Exigences OF** : OF-21
+
+Séparation entre artefact et configuration, fiche de config pré-déploiement. Couvre le besoin de documenter la configuration avant chaque déploiement.
+> **En tant que** responsable de production,
+> **je veux** connaître la configuration exacte de chaque application avant chaque déploiement,
+> **afin de** savoir ce qui a changé et de pouvoir revenir en arrière.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-21 : Contrôle automatisé (Ansible en mode vérification) planifié une fois par an.
+
+#### 4. Playbook de déploiement depuis Nexus
+
+**Exigences OF** : OF-08, OF-12, OF-22, OF-23, OF-56
+
+Récupération par version, contrôle d'empreinte, health check, retour arrière.
+> **En tant qu'**équipe applicative,
+> **je veux** un playbook générique qui déploie une version précise depuis Nexus,
+> **afin que** seuls des artefacts vérifiés soient déployés, toujours de la même façon.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-08 : Traiter le runner de production et son playbook comme périmètre d'administration : registre, poste dédié, journal.
+- [ ] OF-12 : Comptes d'administration distincts des comptes personnels, sans navigation ni messagerie.
+- [ ] OF-22 : Tags de version signés, signature vérifiée par le playbook avant déploiement.
+- [ ] OF-23 : Playbook avec retour arrière testé ; déploiement intégration puis production sans délai injustifié.
+- [ ] OF-56 : Le playbook refuse tout artefact non signé ou non issu du build sécurisé ; analyse d'image au build.
+
+#### 5. Secrets de déploiement
+
+**Exigences OF** : OF-30, OF-31, OF-57
+
+Ansible Vault ou coffre central.
+> **En tant que** responsable sécurité,
+> **je veux** qu'aucun mot de passe ne figure en clair dans les dépôts Ansible,
+> **afin d'**éviter toute fuite d'identifiants de production.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-30 : Un vault Ansible par application, avec un vault ID et un mot de passe par environnement.
+- [ ] OF-31 : Secrets lus uniquement par le runner concerné, variables protégées.
+- [ ] OF-57 : gitleaks avant ajout et en CI.
+
+#### 6. Plateforme d'exécution
+
+**Exigences OF** : OF-05, OF-08, OF-09, OF-11, OF-12, OF-13, OF-14, OF-16, OF-42
+
+Lancement depuis la CI ou depuis AWX / Ansible Automation Platform.
+> **En tant que** core team,
+> **je veux** un point d'exécution unique et journalisé pour les playbooks,
+> **afin de** savoir qui a déployé quoi, où et quand.
+
+**Critères OF** (proposition retenue dans le référentiel) :
+- [ ] OF-05 : Matrice de flux par brique, versionnée dans DocsSre/securite.
+- [ ] OF-08 : Traiter le runner de production et son playbook comme périmètre d'administration : registre, poste dédié, journal.
+- [ ] OF-09 : VM durcie réservée à cet usage, sur le réseau d'administration, sans navigation ni messagerie ; poste physique si l'EE l'impose (19.4).
+- [ ] OF-11 : Export des journaux du job vers le point central pendant l'exécution.
+- [ ] OF-12 : Comptes d'administration distincts des comptes personnels, sans navigation ni messagerie.
+- [ ] OF-13 : Registre tenu à jour dans DocsSre, droits attribués par groupe, date de dernière revue par compte.
+- [ ] OF-14 : Réseau d'administration séparé ; seuls le poste d'administration et le runner de production y figurent.
+- [ ] OF-16 : TLS partout, SSH par certificats, lancement du déploiement par canal authentifié et jeton court.
+- [ ] OF-42 : Journaux de production conservés trois mois au minimum, copie hors ligne.
+
+---
+
+### Dépendances clés de la phase 1
+
+- État des lieux → nourrit toutes les études.
+- Classification des artefacts → arborescence, versioning.
+- Arborescence + versioning Nexus → template de pipeline, playbook de déploiement.
+- Runners → toute la CI/CD.
+- Plateforme d'exécution Ansible → playbook de déploiement.
+- Grille de conformité → pilote et vagues.
+
+### ⚠️ Tension à arbitrer
+
+La phase 1 compte **19 épiques** pour une limite de 2 ou 3 en cours. Les épiques d'infrastructure (mise en service de Nexus, runners) peuvent avancer en parallèle des études si elles sont portées par d'autres personnes : dans ce cas, monter la limite à 3 ou 4, mais pas au-delà. Sans arbitrage, tout avance à 10 %.
+
+---
+
+### Phase 2 — Pilote
+
+| Épique | Labels |
+|---|---|
+| Pilote de bout en bout sur projet A | tous domaines |
+
+Il s'agit d'un **pilote unique et transverse**, plutôt que d'un pilote par outil. Les problèmes apparaissent aux jonctions : le pipeline pousse dans Nexus, puis Ansible déploie depuis Nexus.
+
+---
+
+### Phase 3 — Mise à l'échelle (~150 applications)
+
+| Épique | Contenu |
+|---|---|
+| Vague 1 : une dizaine d'applications simples | lancement, accompagnement, vérification de conformité |
+| Vague 2, vague 3, … | selon les retours de la vague précédente |
+
+- Les issues décrivent les **actions de la core team** (lancer la vague, accompagner les équipes, vérifier la conformité), et non « migrer l'application X ».
+- Pas de 150 issues : **une issue par vague et par action**, avec une checklist des applications dans la description.
+- L'état de chaque application (non commencée, migrée, conforme) se suit dans **l'inventaire des applications**, hors du board.
+
+---
+
+## 6. Templates d'issue
+
+- [ ] Créer `.gitlab/issue_templates/` dans le projet `backlog`
+- [ ] *Groupe › Settings › General › Templates* : sélectionner `backlog` pour que les templates servent à tout le groupe
+
+### `etude.md`
+```markdown
+## Question à trancher
+<!-- Une seule question, formulée pour une réponse A/B ou oui/non -->
+
+## Timebox
+<!-- ex. 3 jours. À expiration, on décide avec ce qu'on sait. -->
+
+## Options étudiées
+
+## Décision
+<!-- + lien vers la note de décision -->
+
+## Issues de réalisation créées
+- [ ]
+
+/label ~"type::étude"
+```
+
+### `creation.md`
+```markdown
+## Objectif
+<!-- Ce qui doit exister à la fin -->
+
+## Critères d'acceptation
+- [ ]
+
+## Lien vers la documentation produite
+
+/label ~"type::création"
+```
+
+### `amelioration.md`
+```markdown
+## Application ou périmètre concerné
+<!-- Rappeler [nom-app] dans le titre -->
+
+## Situation actuelle
+
+## Changement attendu
+
+## Critères d'acceptation
+- [ ]
+
+## Lien vers la documentation mise à jour
+
+/label ~"type::amélioration"
+```
+
+---
+
+## 7. Droits
+
+- [ ] Core team : rôle **Planner** au minimum (GitLab 17.7 et suivants ; Reporter sur les versions antérieures), ou **Developer** pour ceux qui codent.
+- [ ] Hiérarchie : rôle **Reporter**, en lecture seule.
+
+---
+
+## 8. Restitution à la hiérarchie
+
+- [ ] Créer une page wiki **« Livrables »** à la racine du wiki du groupe : la liste des épiques fermées, avec le lien vers chaque livrable. C'est la page à envoyer, la hiérarchie n'a pas à naviguer dans GitLab.
+- [ ] Pour les livrables qui sont du code (template de pipeline, rôles Ansible) : publier des **Releases** versionnées, avec une note de version lisible par un non-technicien.
+
+---
+
+## 9. Règles du jeu (à valider en séance CoP)
+
+- [ ] **Celui qui porte une carte la déplace lui-même.**
+- [ ] **Revue hebdomadaire de 15 min**, en parcourant le board de droite à gauche : `review`, puis `doing`, puis `ready`. On finit avant de commencer.
+- [ ] **Le board est le seul reporting** : pas d'Excel ni de mail d'avancement en parallèle.
+- [ ] Amorcer le backlog avec **10 à 15 issues au maximum**, et pas plus de 5 en `ready`.
+- [ ] Toute issue d'étude a une **question dans son titre** et une **timebox**.
+
+---
+
+## 10. À ignorer pour l'instant
+
+| Fonction | Raison |
+|---|---|
+| Achievements | Badges attribués à des personnes, pas un suivi de livrables |
+| Iterations | Sprints, inutiles en kanban |
+| Milestones | À réserver à d'éventuels jalons futurs |
+| Roadmap | Sans intérêt tant que les épiques n'ont pas de dates |
+
+---
+
+## 11. Points ouverts
+
+### Décisions à prendre (Logo)
+- [ ] Source unique pour les standards : Wiki GitLab ou Confluence
+- [ ] Choix du projet A : une application représentative plutôt que la plus simple, sinon le pilote ne prouve rien pour les 150
+- [ ] Projets existants (CI, Nexus, Ansible) : les transférer sous `industrialisation/`, ou monter le board d'un niveau
+
+### Vérification
+- [ ] Le réseau est-il isolé ? Si oui, prévoir l'import en interne des images des analyseurs de sécurité GitLab.
+
+### Études confiées à la core team (issues `type::étude`)
+- [ ] Immuabilité : tag + hash de commit, ou déploiement par digest SHA256
+- [ ] Arborescence Nexus : par service, ou par domaine métier
+- [ ] Plateforme d'exécution Ansible : depuis la CI, ou AWX / Ansible Automation Platform
+- [ ] SBOM : génération native GitLab (CycloneDX), ou script maison
+- [ ] Contenu de la grille de conformité applicative
+- [ ] Protocole et PKI pour l'accès d'administration : autorité de certification interne ou clés SSH (OF-16)
+- [ ] Poste d'administration : physique ou VM durcie (OF-09, 19.4 en EE)
+- [ ] Point central de collecte des journaux : SIEM existant ou stockage dédié (OF-11, OF-42)
+- [ ] Fréquence de recréation des runners : à chaque job, quotidienne ou hebdomadaire (OF-17)
+- [ ] Liste de référence des logiciels par type de machine : qui la définit et qui la valide (OF-18)
+- [ ] Vault Ansible par application ou par environnement, et coffre externe ou non (OF-30, OF-52)
+
+### Plus tard
+- [ ] La hiérarchie attend-elle un compte-rendu périodique en plus de la page « Livrables » ?
