@@ -105,9 +105,3 @@ En tant que core team, je veux créer un environnement à partir du snapshot en 
   - [ ] Retour arrière : suppression du volume cloné, sans toucher au snapshot source
 - Dépendances : stories 8 et 3.
 
-## Points à confirmer
-
-- **Anonymisation** : elle doit se faire avant le snapshot (story 8). Si elle doit se faire après le clonage, il faut une étape supplémentaire dans la story 9.
-- **Nom du dépôt** qui contient le dossier AHRA : à préciser.
-- **Exadata** : mode de restauration des livrables compilés, à préciser avec l'équipe qui administre l'Exadata.
-- **Cadre RH** : hors périmètre pour l'instant.
