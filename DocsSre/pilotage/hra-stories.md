@@ -1,24 +1,24 @@
-# HRA : stories d'industrialisation de la livraison
+# AHRA : stories d'industrialisation de la livraison
 
 Projet distinct de factice. Stories rédigées à partir des échanges du 28/10/2026.
 
 ## Décisions retenues
 
-- **Cible de déploiement** : Argo, sur le cloud privé.
+- **Cible de déploiement** : cloud privé.
 - **Environnement d'intégration** : I4 (ancien ICAT).
-- **Application actuelle** : HRA (Sopra), sur Exadata, livrables compilés.
+- **Application actuelle** : AHRA, sur Exadata, livrables compilés.
 - **Procédure actuelle** : scripts shell lancés à la main.
-- **POC** : sur « Brique Référentielle », application plus simple que HRA.
-- **Repo OIGL** : sur une instance Nexus dédiée à HRA, distincte de celle de factice.
+- **POC** : sur « Brique Référentielle », application plus simple que AHRA.
+- **Repo OIGL** : sur une instance Nexus dédiée à AHRA, distincte de celle de factice.
 - **Runner** : éphémère (un environnement jetable par job).
 - **Snapshot I4** : snapshot de VM ou de volume, à froid (VM arrêtée), avec données anonymisées.
 - **Environnements à partir du snapshot** : par clonage de volume.
 - **Cadre RH** : hors périmètre pour l'instant.
 
-## Epic : Industrialisation de la livraison HRA
+## Epic : Industrialisation de la livraison AHRA
 
 ### 1. Retravailler la procédure manuelle
-En tant que core team, je veux remplacer les scripts shell lancés à la main sur HRA par une procédure reproductible, afin que le déploiement ne dépende plus d'une personne ni de l'ordre d'exécution.
+En tant que core team, je veux remplacer les scripts shell lancés à la main sur AHRA par une procédure reproductible, afin que le déploiement ne dépende plus d'une personne ni de l'ordre d'exécution.
 - Critère de fermeture : la procédure est décrite étape par étape dans un runbook relu, et chaque étape a une vérification.
 - Critères d'acceptation :
   - [ ] Inventaire de tous les scripts shell et de leur ordre d'exécution actuel
@@ -35,7 +35,7 @@ En tant que responsable de la livraison, je veux un inventaire des assets (fichi
   - [ ] Pour chaque asset : versionné dans Git, publié dans le repo OIGL, ou sauvegardé
   - [ ] Propriétaire nommé par asset
 
-### 3. Playbook Ansible de déploiement sur I4 (cible Argo, cloud privé)
+### 3. Playbook Ansible de déploiement sur I4 (cible cloud privé)
 En tant que core team, je veux un playbook qui ne fait que déployer une version donnée sur I4 dans le cloud privé, afin de déployer de façon reproductible.
 - Critère de fermeture : le playbook déploie une version sur I4, et un second passage ne modifie rien.
 - Critères d'acceptation :
@@ -45,7 +45,7 @@ En tant que core team, je veux un playbook qui ne fait que déployer une version
   - [ ] Secrets lus dans Ansible Vault, jamais en clair
 
 ### 4. POC Ansible sur Brique Référentielle, environnement d'intégration
-En tant que core team, je veux valider la chaîne complète (runner, Ansible, Vault) sur Brique Référentielle, afin de corriger les problèmes avant HRA.
+En tant que core team, je veux valider la chaîne complète (runner, Ansible, Vault) sur Brique Référentielle, afin de corriger les problèmes avant AHRA.
 
 - **4.1 Runner GitLab éphémère sur l'intégration**
   - Critère de fermeture : un job de test tourne sur ce runner, sans intervention manuelle.
@@ -60,8 +60,8 @@ En tant que core team, je veux valider la chaîne complète (runner, Ansible, Va
   - Critère de fermeture : un secret chiffré est déchiffré par le playbook de test, et un scan ne trouve aucun secret en clair.
   - [ ] Clé de chiffrement hors dépôt, dans le coffre
 
-### 5. Repo OIGL en lecture-écriture, sur l'instance Nexus HRA
-En tant que core team, je veux un repository OIGL en lecture-écriture sur l'instance Nexus dédiée à HRA, avec des comptes de service dédiés, afin que les pipelines publient et récupèrent leurs artefacts.
+### 5. Repo OIGL en lecture-écriture, sur l'instance Nexus AHRA
+En tant que core team, je veux un repository OIGL en lecture-écriture sur l'instance Nexus dédiée à AHRA, avec des comptes de service dédiés, afin que les pipelines publient et récupèrent leurs artefacts.
 - Critère de fermeture : un compte de service publie et lit, et un compte sans droit est refusé.
 - Critères d'acceptation :
   - [ ] Compte en écriture pour la publication, compte en lecture pour le déploiement
@@ -75,9 +75,9 @@ En tant que développeur, je veux VS Code installé depuis le portail IT, afin d
   - [ ] Installation depuis le portail, sans téléchargement externe
   - [ ] Version conforme au catalogue
 
-### 7. Déployer HRA avec Ansible via runner éphémère
-En tant que core team, je veux déployer HRA avec Ansible depuis un runner éphémère, afin de sortir du déploiement manuel.
-- Critère de fermeture : HRA est déployé sur la cible depuis la CI, sans intervention manuelle, et la version déployée est identifiable.
+### 7. Déployer AHRA avec Ansible via runner éphémère
+En tant que core team, je veux déployer AHRA avec Ansible depuis un runner éphémère, afin de sortir du déploiement manuel.
+- Critère de fermeture : AHRA est déployé sur la cible depuis la CI, sans intervention manuelle, et la version déployée est identifiable.
 - Critères d'acceptation :
   - [ ] Playbook reprenant les étapes validées de la story 1
   - [ ] Version déployée tracée, avec son empreinte
@@ -108,6 +108,6 @@ En tant que core team, je veux créer un environnement à partir du snapshot en 
 ## Points à confirmer
 
 - **Anonymisation** : elle doit se faire avant le snapshot (story 8). Si elle doit se faire après le clonage, il faut une étape supplémentaire dans la story 9.
-- **Nom du dépôt** qui contient le dossier HRA : à préciser.
+- **Nom du dépôt** qui contient le dossier AHRA : à préciser.
 - **Exadata** : mode de restauration des livrables compilés, à préciser avec l'équipe qui administre l'Exadata.
 - **Cadre RH** : hors périmètre pour l'instant.
