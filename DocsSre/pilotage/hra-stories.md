@@ -28,6 +28,7 @@ Source : exigences officielles ReCyF, recommandations ANSSI DevSecOps et mesures
 | OF-11 | Recommandation ANSSI | Journaliser et superviser la CI/CD de production | 12 |
 | OF-13 (11.A.6, 11.A.7-EE) | Obligatoire en EE | Liste à jour des comptes d'administration, droits restreints à chaque modification, via des groupes | 5, 10 |
 | OF-16 (19.10-EE, 19.11-EE, 8.1-EI/EE, 8.3-EE) | Obligatoire en EE (19.10) | Chiffrement et authentification de bout en bout des communications d'administration | 5, 7, 11 |
+| OF-17 | Recommandation ANSSI | Réinstancier régulièrement l'infrastructure CI/CD, sans données persistantes | 4.1, 7 |
 | OF-30 | Recommandation ANSSI | Un gestionnaire de secrets distinct par environnement | 4.3, 13 |
 | 19.1 à 19.8-EE | Obligatoire en EE | Réseau d'administration dédié, cloisonné et filtré | 11 |
 | 20.1, 20.4 à 20.6-EE | Obligatoire en EE | Collecte, conservation d'au moins trois mois, copie hors ligne, traitement sous 24 h | 12 |
@@ -72,6 +73,8 @@ En tant que core team, je veux valider la chaîne complète (runner, Ansible, Va
   - [ ] Aucune donnée ni secret ne persiste entre deux jobs
   - [ ] Le runner d'intégration ne partage aucun identifiant avec le runner de production (OF-03, story 13)
   - [ ] Les journaux du job sont exportés vers le point de collecte pendant l'exécution, et non stockés sur le runner (story 12)
+  - [ ] Recréation du runner depuis son code (Ansible), avec date de dernière recréation tracée (OF-17)
+  - [ ] Point à trancher : fréquence de recréation (à chaque job, quotidienne ou hebdomadaire) et déclencheur (planifié ou à chaque mise à jour de l'image)
 
 - **4.2 Ansible installé et versionné**
   - Critère de fermeture : un playbook de test s'exécute depuis le runner.
