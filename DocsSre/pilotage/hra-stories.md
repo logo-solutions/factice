@@ -27,6 +27,7 @@ Source : exigences officielles ReCyF, recommandations ANSSI DevSecOps et mesures
 | OF-10 | Recommandation ANSSI | Moindre privilège, jetons générés à la demande | 5, 7, 10 |
 | OF-11 | Recommandation ANSSI | Journaliser et superviser la CI/CD de production | 12 |
 | OF-13 (11.A.6, 11.A.7-EE) | Obligatoire en EE | Liste à jour des comptes d'administration, droits restreints à chaque modification, via des groupes | 5, 10 |
+| OF-16 (19.10-EE, 19.11-EE, 8.1-EI/EE, 8.3-EE) | Obligatoire en EE (19.10) | Chiffrement et authentification de bout en bout des communications d'administration | 5, 7, 11 |
 | OF-30 | Recommandation ANSSI | Un gestionnaire de secrets distinct par environnement | 4.3, 13 |
 | 19.1 à 19.8-EE | Obligatoire en EE | Réseau d'administration dédié, cloisonné et filtré | 11 |
 | 20.1, 20.4 à 20.6-EE | Obligatoire en EE | Collecte, conservation d'au moins trois mois, copie hors ligne, traitement sous 24 h | 12 |
@@ -91,6 +92,7 @@ En tant que core team, je veux un repository OIGL en lecture-écriture sur l'ins
   - [ ] Blob store dédié, avec quota souple
   - [ ] Les deux comptes de service figurent dans le registre des comptes d'administration (story 10), avec leur groupe de droits
   - [ ] Jetons générés à la demande, et non stockés en clair (OF-10)
+  - [ ] Accès au repo OIGL en HTTPS uniquement (OF-16)
 
 ### 6. Installer VS Code depuis le portail IT
 En tant que développeur, je veux VS Code installé depuis le portail IT, afin de travailler avec les outils validés.
@@ -108,6 +110,7 @@ En tant que core team, je veux déployer AHRA avec Ansible depuis un runner de p
   - [ ] Journal d'exécution conforme à la story 3 et à la story 12
   - [ ] Le déploiement en production n'est lancé que depuis le réseau d'administration (story 11)
   - [ ] Le runner de production ne partage aucun identifiant avec celui d'intégration (OF-03, story 13)
+  - [ ] Le lancement du déploiement de production passe par un canal chiffré et authentifié (OF-16, 19.10)
 - Dépendances : stories 1, 2, 3, 4.1, 11, 12, 13.
 
 ### 8. Snapshot à froid de l'intégration ICAT
@@ -149,7 +152,9 @@ En tant que responsable de la sécurité, je veux un poste dédié à l'administ
   - [ ] Accès au réseau d'administration dédié, cloisonné et filtré (19.1, 19.8)
   - [ ] Poste durci selon les recommandations ANSSI (19.6), ou poste physique dédié si la décision le retient
   - [ ] Liste des personnes autorisées à s'y connecter, dans le registre (story 10)
+  - [ ] Tous les flux depuis ce poste sont chiffrés et authentifiés (OF-16, 19.10) ; authentification multifacteur pour les personnes (8.3-EE)
 - Point à trancher : poste physique ou VM ; le passage en EE impose un poste physique dédié (19.4), ce qui change le coût.
+- Point à trancher : protocole et infrastructure de clés (autorité de certification interne, gestion des clés SSH). Ce choix détermine la rotation et la révocation des accès.
 
 ### 12. Journaliser et superviser la CI/CD de production
 En tant que responsable de la sécurité, je veux que chaque job de production soit journalisé et supervisé, y compris lorsque le runner est détruit, afin de satisfaire OF-11 et les mesures 20.1, 20.4 à 20.6.
